@@ -9,6 +9,7 @@ import 'ingest/foreground_ingest.dart';
 import 'onboarding/connect_screen.dart';
 import 'sync/auto_sync.dart';
 import 'sync/background.dart';
+import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,7 +97,8 @@ class _MoneyLensAppState extends State<MoneyLensApp>
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MoneyLens',
-      theme: ThemeData(colorSchemeSeed: Colors.green, useMaterial3: true),
+      theme: moneyLensTheme(Brightness.light),
+      darkTheme: moneyLensTheme(Brightness.dark),
       home: _onboarded
           ? DashboardScreen(
               key: _dashboard,

@@ -18,6 +18,28 @@ String formatVnTime(DateTime t) {
   return '${_two(l.day)}/${_two(l.month)} ${_two(l.hour)}:${_two(l.minute)}';
 }
 
+/// `14:51` in Vietnam time.
+String formatVnClock(DateTime t) {
+  final l = t.toUtc().add(vnOffset);
+  return '${_two(l.hour)}:${_two(l.minute)}';
+}
+
+const _weekdays = [
+  'Thứ Hai',
+  'Thứ Ba',
+  'Thứ Tư',
+  'Thứ Năm',
+  'Thứ Sáu',
+  'Thứ Bảy',
+  'Chủ nhật',
+];
+
+/// `Thứ Năm, 16/10` in Vietnam time.
+String formatVnDay(DateTime t) {
+  final l = t.toUtc().add(vnOffset);
+  return '${_weekdays[l.weekday - 1]}, ${_two(l.day)}/${_two(l.month)}';
+}
+
 /// `10/2026` for `2026-10`.
 String formatMonth(String monthKey) {
   final parts = monthKey.split('-');

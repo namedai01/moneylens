@@ -17,4 +17,14 @@ void main() {
   test('formatVnTime uses Vietnam time', () {
     expect(formatVnTime(DateTime.utc(2026, 10, 16, 17, 5)), '17/10 00:05');
   });
+
+  test('formatVnDay names the Vietnam-time weekday', () {
+    // 17:05 UTC Friday is 00:05 Saturday in Vietnam.
+    expect(formatVnDay(DateTime.utc(2026, 10, 16, 17, 5)), 'Thứ Bảy, 17/10');
+    expect(formatVnDay(DateTime.utc(2026, 10, 18, 3)), 'Chủ nhật, 18/10');
+  });
+
+  test('formatVnClock shows Vietnam hour and minute', () {
+    expect(formatVnClock(DateTime.utc(2026, 10, 16, 17, 5)), '00:05');
+  });
 }

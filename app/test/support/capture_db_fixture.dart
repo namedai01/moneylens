@@ -59,7 +59,11 @@ Future<String> createCaptureDb(
 
 /// Appends rows to an existing fixture, as the listener does while the app runs.
 Future<void> appendRaw(String path, List<Map<String, Object?>> rows) async {
-  final db = await databaseFactoryFfi.openDatabase(path);
+  // A separate writable connection, like Kotlin's, not the cached read-only one.
+  final db = await databaseFactoryFfi.openDatabase(
+    path,
+    options: OpenDatabaseOptions(singleInstance: false),
+  );
   for (final r in rows) {
     await db.insert('raw_events', r);
   }

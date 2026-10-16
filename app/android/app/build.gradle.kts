@@ -52,4 +52,7 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // Real org.json for JVM unit tests (the android.jar copy is stubbed).
     testImplementation("org.json:json:20250517")
+    // Real SQLite + Context for JVM unit tests of CaptureDb.
+    testImplementation("org.robolectric:robolectric:4.15.1")
+    testImplementation("androidx.test:core:1.6.1")
 }

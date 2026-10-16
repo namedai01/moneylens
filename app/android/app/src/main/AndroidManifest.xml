@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <application
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:label="MoneyLens"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

@@ -18,6 +18,8 @@ class VcbNotificationListener : NotificationListenerService() {
     private val io = Executors.newSingleThreadExecutor()
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        // Other apps' notifications are never read, stored or counted.
+        if (!isVcbPackage(sbn.packageName)) return
         val extras = sbn.notification.extras
         val n = CapturedNotification(
             packageName = sbn.packageName,
@@ -28,10 +30,24 @@ class VcbNotificationListener : NotificationListenerService() {
         )
         io.execute {
             try {
-                CaptureLogStore(logFile(this)).record(n)
+                val db = CaptureDb.get(this)
+                db.insert(n, receivedAt = System.currentTimeMillis())
+                db.setState("last_vcb_at", n.postedAt)
             } catch (e: Exception) {
                 // Never log notification content: it may belong to any app.
                 Log.e(TAG, "failed to record notification from ${n.packageName}", e)
+            }
+        }
+    }
+
+    override fun onListenerConnected() {
+        io.execute {
+            try {
+                val db = CaptureDb.get(this)
+                db.importLegacyLog(legacyLogFile(this))
+                db.setState("connected_at", System.currentTimeMillis())
+            } catch (e: Exception) {
+                Log.e(TAG, "failed to record listener connection", e)
             }
         }
     }
@@ -49,8 +65,8 @@ class VcbNotificationListener : NotificationListenerService() {
     companion object {
         private const val TAG = "VcbNotificationListener"
 
-        /** Same directory Flutter's path_provider calls "documents" (app_flutter). */
-        fun logFile(context: Context): File =
-            File(context.getDir("flutter", Context.MODE_PRIVATE), CaptureLogStore.FILE_NAME)
+        /** Phase-0 JSON log (app_flutter/capture_log.json), imported once into [CaptureDb]. */
+        fun legacyLogFile(context: Context): File =
+            File(context.getDir("flutter", Context.MODE_PRIVATE), "capture_log.json")
     }
 }

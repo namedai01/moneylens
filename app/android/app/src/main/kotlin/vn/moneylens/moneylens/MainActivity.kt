@@ -1,6 +1,7 @@
 package vn.moneylens.moneylens
 
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -21,7 +22,29 @@ class MainActivity : FlutterActivity() {
                         startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                         result.success(null)
                     }
-                    "logPath" -> result.success(VcbNotificationListener.logFile(this).path)
+                    "captureDbPath" -> {
+                        val db = CaptureDb.get(this)
+                        db.importLegacyLog(VcbNotificationListener.legacyLogFile(this))
+                        db.writableDatabase // creates the file before Dart opens it read-only
+                        result.success(getDatabasePath(CaptureDb.FILE_NAME).path)
+                    }
+                    "debugInjectVcb" -> {
+                        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0) {
+                            result.notImplemented()
+                        } else {
+                            val inserted = CaptureDb.get(this).insert(
+                                CapturedNotification(
+                                    packageName = "debug.vcb",
+                                    title = call.argument<String>("title"),
+                                    text = call.argument<String>("bigText"),
+                                    bigText = call.argument<String>("bigText"),
+                                    postedAt = System.currentTimeMillis(),
+                                ),
+                                receivedAt = System.currentTimeMillis(),
+                            )
+                            result.success(inserted)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }

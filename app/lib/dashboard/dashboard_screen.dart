@@ -86,6 +86,21 @@ class DashboardScreenState extends State<DashboardScreen> {
     await reload();
   }
 
+  /// Gaps keyed by the later transaction: the marker sits right below it,
+  /// between the two rows whose balances don't add up.
+  Map<int, ContinuityGap> get _gapAfter => {
+    for (final g in _gaps) g.after.id: g,
+  };
+
+  /// Month of the newest gap, where the banner leads.
+  String? get _gapMonth => _gaps.isEmpty
+      ? null
+      : monthKeyOf(
+          _gaps
+              .map((g) => g.after.occurredAt)
+              .reduce((a, b) => a.isAfter(b) ? a : b),
+        );
+
   void _selectMonth(String month) {
     if (month == _month) return;
     setState(() => _month = month);
@@ -141,14 +156,15 @@ class DashboardScreenState extends State<DashboardScreen> {
                     'Trạng thái rồi chọn "Đồng bộ ngay".',
                 onTap: _openStatus,
               ),
-            for (final g in _gaps)
+            if (_gaps.isNotEmpty)
               _Banner(
                 icon: Icons.link_off_rounded,
                 color: theme.colorScheme.tertiaryContainer,
                 onColor: theme.colorScheme.onTertiaryContainer,
-                text:
-                    'Có thể thiếu giao dịch giữa ${formatVnTime(g.before.occurredAt)} '
-                    'và ${formatVnTime(g.after.occurredAt)} (số dư không khớp).',
+                text: _gapsText(_gaps),
+                onTap: _gapMonth == _month
+                    ? null
+                    : () => _selectMonth(_gapMonth!),
               ),
             _MonthSwitcher(
               month: _month,
@@ -170,12 +186,67 @@ class DashboardScreenState extends State<DashboardScreen> {
             else
               for (final day in _byDay(_txns)) ...[
                 _DayHeader(day),
-                for (final t in day.txns)
+                for (final t in day.txns) ...[
                   _TxnTile(t, onToggle: () => _toggle(t)),
+                  if (_gapAfter[t.id] case final gap?) _GapMarker(gap),
+                ],
                 const SizedBox(height: 16),
               ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+String _gapsText(List<ContinuityGap> gaps) {
+  if (gaps.length > 1) {
+    return 'Số dư không khớp ở ${gaps.length} chỗ — có thể thiếu giao dịch.';
+  }
+  final g = gaps.single;
+  return 'Có thể thiếu giao dịch giữa ${formatVnTime(g.before.occurredAt)} '
+      'và ${formatVnTime(g.after.occurredAt)} (số dư không khớp).';
+}
+
+/// Inline note between two transactions whose balances don't add up.
+class _GapMarker extends StatelessWidget {
+  final ContinuityGap gap;
+
+  const _GapMarker(this.gap);
+
+  /// Net amount of whatever was missed between the two.
+  int get _missing =>
+      gap.after.balanceAfter! -
+      (gap.before.balanceAfter! + gap.after.signedAmount);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(top: 6, bottom: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.link_off_rounded,
+            size: 16,
+            color: scheme.onTertiaryContainer,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Số dư lệch ${formatVnd(_missing, signed: true)} — '
+              'có thể thiếu giao dịch ở đây',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: scheme.onTertiaryContainer,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

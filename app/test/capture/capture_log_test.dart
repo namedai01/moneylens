@@ -60,6 +60,24 @@ void main() {
     expect(all.first.postedAt.minute, 59);
   });
 
+  test('concurrent records are all kept', () async {
+    final log = CaptureLog(file);
+    for (var i = 0; i < 10; i++) {
+      await log.record(_n('com.VCB', i));
+    }
+
+    // The plugin invokes the callback without awaiting it, so bursts overlap.
+    await Future.wait([
+      log.record(_n('com.VCB', 20)),
+      CaptureLog(file).record(_n('com.VCB', 21)),
+      log.record(_n('com.zing', 22)),
+      CaptureLog(file).record(_n('com.VCB', 23)),
+    ]);
+
+    expect(await log.recentVcb(limit: 100), hasLength(13));
+    expect((await log.packageCounts())['com.zing'], 1);
+  });
+
   test('corrupt file returns empty', () async {
     file.writeAsStringSync('not json');
     final log = CaptureLog(file);

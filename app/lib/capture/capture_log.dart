@@ -15,7 +15,19 @@ class CaptureLog {
 
   CaptureLog(this.file);
 
-  Future<void> record(CapturedNotification n) async {
+  /// Pending write per log path. The plugin fires callbacks without awaiting
+  /// them, so read-modify-write cycles must be chained or they lose entries.
+  static final Map<String, Future<void>> _tails = {};
+  static var _tmpCounter = 0;
+
+  Future<void> record(CapturedNotification n) {
+    final tail = _tails[file.path] ?? Future<void>.value();
+    final next = tail.then((_) => _record(n));
+    _tails[file.path] = next.catchError((_) {});
+    return next;
+  }
+
+  Future<void> _record(CapturedNotification n) async {
     final data = await _read();
     final counts = data.counts;
     counts[n.packageName] = (counts[n.packageName] ?? 0) + 1;
@@ -63,7 +75,7 @@ class CaptureLog {
     List<CapturedNotification> vcb,
     Map<String, int> counts,
   ) async {
-    final tmp = File('${file.path}.tmp');
+    final tmp = File('${file.path}.${pid}_${_tmpCounter++}.tmp');
     await tmp.writeAsString(
       jsonEncode({
         'vcb': vcb.map((n) => n.toJson()).toList(),

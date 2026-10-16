@@ -44,13 +44,17 @@ class AppServices {
     this.auth,
   });
 
-  /// Production wiring on the phone.
-  static Future<AppServices> open() async {
+  /// Production wiring on the phone. In the [background] isolate the
+  /// `moneylens/listener` channel doesn't exist, so `capture.db` is found by
+  /// path (it lives next to `moneylens.db` in the app's databases dir).
+  static Future<AppServices> open({bool background = false}) async {
     final support = await getApplicationSupportDirectory();
     final auth = GoogleAuth();
     final gateway = GoogleSheetsGateway(() => auth.headers(interactive: false));
     return assemble(
-      capturePath: await captureDbPath(),
+      capturePath: background
+          ? p.join(await getDatabasesPath(), 'capture.db')
+          : await captureDbPath(),
       appDbPath: p.join(await getDatabasesPath(), 'moneylens.db'),
       rulesCache: File(p.join(support.path, 'parser-rules.json')),
       loadBundled: () => rootBundle.loadString('assets/parser-rules.json'),

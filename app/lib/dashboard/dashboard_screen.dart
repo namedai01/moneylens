@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_services.dart';
+import '../data/settings_store.dart';
 import '../data/txn.dart';
 import '../data/vn_time.dart';
 import '../format.dart';
@@ -35,6 +36,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   List<MonthSummary> _history = [];
   int _failed = 0;
   List<ContinuityGap> _gaps = [];
+  bool _needsSignIn = false;
 
   @override
   void initState() {
@@ -50,6 +52,8 @@ class DashboardScreenState extends State<DashboardScreen> {
     final history = await s.ledger.lastMonths(12, now: _now());
     final failed = await s.parseLog.failedCount();
     final gaps = await s.ledger.continuityGaps();
+    final needsSignIn =
+        await s.settings.get(SettingKeys.lastSyncError) == 'auth_required';
     if (!mounted) return;
     setState(() {
       _summary = summary;
@@ -57,7 +61,17 @@ class DashboardScreenState extends State<DashboardScreen> {
       _history = history;
       _failed = failed;
       _gaps = gaps;
+      _needsSignIn = needsSignIn;
     });
+  }
+
+  Future<void> _openStatus() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => StatusScreen(services: widget.services),
+      ),
+    );
+    await reload();
   }
 
   void _shiftMonth(int delta) {
@@ -82,17 +96,14 @@ class DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             tooltip: 'Trạng thái',
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => StatusScreen(services: widget.services),
-              ),
-            ),
+            onPressed: _openStatus,
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await widget.services.ingest.run();
+          final report = await widget.services.ingest.run();
+          if (report.parsed > 0) widget.onLocalChange?.call();
           await reload();
         },
         child: ListView(
@@ -110,6 +121,14 @@ class DashboardScreenState extends State<DashboardScreen> {
                         FailedEventsScreen(services: widget.services),
                   ),
                 ),
+              ),
+            if (_needsSignIn)
+              _Banner(
+                color: theme.colorScheme.errorContainer,
+                text:
+                    'Chưa sao lưu được: cần đăng nhập lại Google. Bấm để mở '
+                    'Trạng thái rồi chọn "Đồng bộ ngay".',
+                onTap: _openStatus,
               ),
             for (final g in _gaps)
               _Banner(

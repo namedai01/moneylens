@@ -11,6 +11,7 @@ import '../app_services.dart';
 import '../capture/listener.dart';
 import '../capture/raw_event.dart';
 import '../data/settings_store.dart';
+import '../sync/background.dart';
 import '../sync/backup_actions.dart';
 import '../sync/sync_status.dart';
 
@@ -166,6 +167,11 @@ class _StatusScreenState extends State<StatusScreen>
               TextButton(
                 onPressed: _injectFake,
                 child: const Text('Chèn thông báo VCB giả'),
+              ),
+            if (kDebugMode)
+              TextButton(
+                onPressed: debugRunBackgroundSyncNow,
+                child: const Text('Chạy sync nền ngay'),
               ),
             const SizedBox(height: 16),
             Row(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moneylens/app_services.dart';
 import 'package:moneylens/dashboard/dashboard_screen.dart';
+import 'package:moneylens/data/settings_store.dart';
 
 import '../support/capture_db_fixture.dart';
 import '../support/samples.dart';
@@ -124,5 +125,14 @@ void main() {
     ]);
     await show(tester, s);
     expect(find.textContaining('Có thể thiếu giao dịch'), findsOneWidget);
+  });
+
+  testWidgets('auth error shows a sign-in banner', (tester) async {
+    final s = await services(tester, []);
+    await tester.runAsync(
+      () => s.settings.set(SettingKeys.lastSyncError, 'auth_required'),
+    );
+    await show(tester, s);
+    expect(find.textContaining('cần đăng nhập lại Google'), findsOneWidget);
   });
 }

@@ -5,7 +5,7 @@ Người làm: chủ dự án. Thời gian: ~30 phút. Kết quả: app đăng n
 ## 1. Project + API
 
 1. Vào <https://console.cloud.google.com/> → tạo project `moneylens`.
-2. *APIs & Services → Library* → bật **Google Sheets API**.
+2. *APIs & Services → Library* → bật **Google Sheets API** và **Google Drive API**. Drive API dùng để tìm lại Sheet cũ khi cài lại app; thiếu nó thì kết nối vẫn chạy nhưng không có lựa chọn khôi phục.
 
 ## 2. OAuth consent screen
 

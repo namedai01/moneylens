@@ -11,6 +11,7 @@ Txn txn({
 }) => Txn(
   id: id,
   accountId: 1,
+  accountBank: 'VCB',
   accountLast4: '3456',
   rawEventId: id,
   ref: 'MBVCB.$id',
@@ -51,6 +52,7 @@ void main() {
       '3456',
       'android_notif',
       1,
+      'VCB',
     ]);
     expect(rows[3][3], 'ra');
     expect(rows[3][4], -300000);
@@ -82,5 +84,99 @@ void main() {
       ),
     );
     expect(income, contains('IFERROR('));
+  });
+
+  group('parseTransactionRows', () {
+    test('reads back what transactionRows wrote', () {
+      final at = DateTime.utc(2026, 10, 16, 3, 24, 27);
+      final rows = transactionRows([
+        txn(id: 1, at: at, amount: 50000, direction: Direction.incoming),
+        txn(id: 2, at: at.add(const Duration(hours: 1)), excluded: true),
+      ]);
+      final back = parseTransactionRows(rows);
+      expect(back, hasLength(2));
+      final first = back[0];
+      expect(first.ref, 'MBVCB.1');
+      expect(first.occurredAt, at);
+      expect(first.occurredAt.isUtc, isTrue);
+      expect(first.direction, Direction.incoming);
+      expect(first.amount, 50000);
+      expect(first.balanceAfter, 1000000);
+      expect(first.description, 'cafe');
+      expect(first.excluded, isFalse);
+      expect(first.bankCode, 'VCB');
+      expect(first.accountLast4, '3456');
+      expect(first.source, 'android_notif');
+      expect(back[1].direction, Direction.outgoing);
+      expect(back[1].amount, 300000);
+      expect(back[1].excluded, isTrue);
+    });
+
+    test('Sheets from before the bank column default to VCB', () {
+      final back = parseTransactionRows([
+        [txNotice],
+        txHeader.take(11).toList(),
+        ['MBVCB.9', '2026-10-16T10:00:00+07:00', '2026-10', 'ra', -1000],
+      ]);
+      expect(back.single.bankCode, legacyBankCode);
+      // Trailing empty cells are dropped by the API.
+      expect(back.single.balanceAfter, isNull);
+      expect(back.single.description, '');
+      expect(back.single.accountLast4, isNull);
+    });
+
+    test('skips blank rows', () {
+      final back = parseTransactionRows([
+        [txNotice],
+        txHeader,
+        [],
+        ['', '', ''],
+        ['MBVCB.9', '2026-10-16T10:00:00+07:00', '2026-10', 'ra', -1000],
+      ]);
+      expect(back, hasLength(1));
+    });
+
+    test('a broken row stops the restore and names the Sheet row', () {
+      const ok = ['MBVCB.1', '2026-10-16T10:00:00+07:00', '2026-10', 'ra', -1];
+      Matcher fails(String message) => throwsA(
+        isA<FormatException>().having((e) => e.message, 'message', message),
+      );
+      expect(
+        () => parseTransactionRows([
+          [txNotice],
+          txHeader,
+          ok,
+          ['MBVCB.2', 'hôm qua', '2026-10', 'ra', -1],
+        ]),
+        fails('dòng 4, cột "thời gian" không đọc được'),
+      );
+      expect(
+        () => parseTransactionRows([
+          [txNotice],
+          txHeader,
+          ['MBVCB.2', '2026-10-16T10:00:00+07:00', '2026-10', 'ra', '50k'],
+        ]),
+        fails('dòng 3, cột "số tiền" không đọc được'),
+      );
+      expect(
+        () => parseTransactionRows([
+          [txNotice],
+          txHeader,
+          ['MBVCB.2', '2026-10-16T10:00:00+07:00', '2026-10', 'ra', 0],
+        ]),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects a tab that is not ours', () {
+      expect(
+        () => parseTransactionRows([
+          ['a', 'b'],
+          ['ngày', 'số tiền'],
+        ]),
+        throwsFormatException,
+      );
+      expect(() => parseTransactionRows([]), throwsFormatException);
+    });
   });
 }

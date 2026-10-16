@@ -38,6 +38,32 @@ class SyncService {
     await settings.set(SettingKeys.lastSyncError, null);
   }
 
+  /// Sheets from an earlier install worth offering for restore: only while
+  /// nothing is linked and the ledger is empty, so a restore never has local
+  /// data to lose.
+  Future<List<SheetFile>> restorable() async {
+    if (await settings.get(SettingKeys.spreadsheetId) != null) return [];
+    if (!await ledger.isEmpty()) return [];
+    return gateway().findSpreadsheets();
+  }
+
+  /// Loads [spreadsheetId] into the empty ledger, then links it. Linking
+  /// comes last on purpose: sync rewrites the whole tab, so linking first and
+  /// syncing an empty ledger would wipe the very data being restored.
+  /// Returns how many transactions came back.
+  Future<int> restore(String spreadsheetId) async {
+    if (!await ledger.isEmpty()) {
+      throw StateError('restore needs an empty ledger');
+    }
+    final txns = parseTransactionRows(
+      await gateway().readTransactions(spreadsheetId),
+    );
+    final restored = await ledger.restore(txns);
+    await settings.set(SettingKeys.spreadsheetId, spreadsheetId);
+    await settings.set(SettingKeys.lastSyncError, null);
+    return restored;
+  }
+
   /// Concurrent calls share one pass.
   Future<SyncResult> sync() =>
       _running ??= _sync().whenComplete(() => _running = null);

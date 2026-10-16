@@ -6,6 +6,7 @@ import 'package:moneylens/data/ledger.dart';
 import 'package:moneylens/data/parse_log.dart';
 import 'package:moneylens/data/settings_store.dart';
 import 'package:moneylens/ingest/ingest.dart';
+import 'package:moneylens/sync/sheet_layout.dart';
 import 'package:moneylens/sync/sheets_gateway.dart';
 import 'package:moneylens/sync/sync_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -45,7 +46,10 @@ void main() {
     settings = SettingsStore(db);
     gateway = FakeSheetsGateway();
     final rules = bundledRules();
-    source = await RawEventSource.open(capturePath, factory: databaseFactoryFfi);
+    source = await RawEventSource.open(
+      capturePath,
+      factory: databaseFactoryFfi,
+    );
     sync = SyncService(
       ledger: ledger,
       settings: settings,
@@ -153,5 +157,73 @@ void main() {
     expect(await sync.sync(), SyncResult.failed);
     expect(await settings.get(SettingKeys.lastSyncError), 'ingest_failed');
     expect(gateway.replaced, isEmpty);
+  });
+
+  group('restore', () {
+    const old = SheetFile(id: 'old', name: 'MoneyLens');
+
+    /// What an earlier install synced: its two transactions, one hidden.
+    Future<List<List<Object?>>> earlierSheet() async {
+      await sync.connect();
+      await sync.sync();
+      await ledger.setExcluded((await ledger.all()).first.id, true);
+      await sync.sync();
+      return gateway.replaced.last.rows;
+    }
+
+    test('offers Sheets only on a fresh, unlinked ledger', () async {
+      gateway.files = [old];
+      expect(await sync.restorable(), [old]);
+      await settings.set(SettingKeys.spreadsheetId, 'linked');
+      expect(await sync.restorable(), isEmpty);
+      await settings.set(SettingKeys.spreadsheetId, null);
+      await ledger.restore(parseTransactionRows(await earlierSheet()));
+      await settings.set(SettingKeys.spreadsheetId, null);
+      expect(await sync.restorable(), isEmpty);
+    });
+
+    test(
+      'loads the Sheet, links it, and the next sync rewrites it as is',
+      () async {
+        final rows = await earlierSheet();
+        final fresh = SyncService(
+          ledger: Ledger(await memoryAppDb(), clock: () => now),
+          settings: SettingsStore(await memoryAppDb()),
+          ingest: sync.ingest,
+          gateway: () => gateway,
+          clock: () => now,
+        );
+        gateway.tabs['old'] = rows;
+
+        expect(await fresh.restore('old'), 2);
+        expect(await fresh.settings.get(SettingKeys.spreadsheetId), 'old');
+        final restored = await fresh.ledger.all();
+        expect(restored.map((t) => t.ref), ['MBVCB.1', 'MBVCB.2']);
+        expect(restored.map((t) => t.excluded), [true, false]);
+
+        // Everything but the local row ids survives the round trip.
+        final rewritten = transactionRows(restored);
+        List<Object?> withoutId(List<Object?> r) => [...r]..removeAt(10);
+        expect(rewritten.skip(2).map(withoutId), rows.skip(2).map(withoutId));
+      },
+    );
+
+    test('refuses when the ledger has data', () async {
+      await sync.connect();
+      await sync.sync();
+      await settings.set(SettingKeys.spreadsheetId, null);
+      gateway.tabs['old'] = transactionRows([]);
+      expect(() => sync.restore('old'), throwsStateError);
+      expect(await settings.get(SettingKeys.spreadsheetId), isNull);
+    });
+
+    test('an unreadable Sheet is not linked', () async {
+      gateway.tabs['old'] = [
+        ['not ours'],
+      ];
+      await expectLater(sync.restore('old'), throwsFormatException);
+      expect(await settings.get(SettingKeys.spreadsheetId), isNull);
+      expect(await ledger.isEmpty(), isTrue);
+    });
   });
 }

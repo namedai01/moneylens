@@ -4,6 +4,12 @@ class FakeSheetsGateway implements SheetsGateway {
   final created = <({String title, List<List<Object?>> summary})>[];
   final replaced = <({String id, List<List<Object?>> rows})>[];
 
+  /// What [findSpreadsheets] returns.
+  var files = <SheetFile>[];
+
+  /// Transactions tab per spreadsheet id, for [readTransactions].
+  final tabs = <String, List<List<Object?>>>{};
+
   /// Thrown by the next call, then cleared.
   Object? throwOnNext;
 
@@ -30,5 +36,19 @@ class FakeSheetsGateway implements SheetsGateway {
   ) async {
     _maybeThrow();
     replaced.add((id: spreadsheetId, rows: rows));
+  }
+
+  @override
+  Future<List<SheetFile>> findSpreadsheets() async {
+    _maybeThrow();
+    return files;
+  }
+
+  @override
+  Future<List<List<Object?>>> readTransactions(String spreadsheetId) async {
+    _maybeThrow();
+    final tab = tabs[spreadsheetId];
+    if (tab == null) throw SheetMissing();
+    return tab;
   }
 }

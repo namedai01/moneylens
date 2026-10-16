@@ -14,24 +14,49 @@ class BackupActions {
 
   SettingsStore get _settings => services.settings;
 
-  /// Sign in, create the spreadsheet if needed, then sync once.
-  Future<String?> connect() async {
+  /// Sign in, restore or create the spreadsheet, then sync once.
+  /// [pickRestore] is shown Sheets left by an earlier install and returns
+  /// the id to restore, or null to start a new Sheet.
+  Future<String?> connect({
+    Future<String?> Function(List<SheetFile> found)? pickRestore,
+  }) async {
     final auth = services.auth;
     if (auth == null) return 'Đăng nhập Google không khả dụng.';
     try {
       final email = await auth.signIn();
       await _settings.set(SettingKeys.googleEmail, email);
-      await services.sync.connect();
+      final found = pickRestore == null ? const <SheetFile>[] : await _found();
+      final chosen = found.isEmpty ? null : await pickRestore!(found);
+      if (chosen != null) {
+        await services.sync.restore(chosen);
+      } else {
+        await services.sync.connect();
+      }
     } on GoogleSignInException catch (e) {
       return e.code == GoogleSignInExceptionCode.canceled
           ? 'Đã huỷ đăng nhập.'
           : 'Đăng nhập Google lỗi (${e.code.name}).';
     } on AuthRequired {
       return 'Chưa cấp quyền cho app tạo Sheet.';
+    } on SheetMissing {
+      return 'Không đọc được Sheet để khôi phục.';
+    } on FormatException catch (e) {
+      return 'Chưa khôi phục: ${e.message}. Sửa Sheet rồi thử lại.';
     } catch (e) {
       return 'Không tạo được Sheet (${e.runtimeType}).';
     }
     return _message(await services.sync.sync());
+  }
+
+  /// Looking for old Sheets is best effort: with the Drive API off (403) the
+  /// user can still connect, just without the restore offer. A real auth
+  /// problem shows up again when the Sheet is created.
+  Future<List<SheetFile>> _found() async {
+    try {
+      return await services.sync.restorable();
+    } catch (_) {
+      return const [];
+    }
   }
 
   /// Sync now; after an auth error, ask Google for consent first.

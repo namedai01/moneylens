@@ -91,6 +91,59 @@ void main() {
     expect(put.url.queryParameters['valueInputOption'], 'USER_ENTERED');
   });
 
+  test('findSpreadsheets lists only Sheets, newest first', () async {
+    final files = await gateway(
+      (_) async => ok({
+        'files': [
+          {
+            'id': 'a',
+            'name': 'MoneyLens',
+            'modifiedTime': '2026-10-16T03:00:00.000Z',
+          },
+        ],
+      }),
+    ).findSpreadsheets();
+    expect(files.single.id, 'a');
+    expect(files.single.name, 'MoneyLens');
+    expect(files.single.modifiedAt, DateTime.utc(2026, 10, 16, 3));
+    final req = requests.single;
+    expect(req.url.host, 'www.googleapis.com');
+    expect(req.url.path, '/drive/v3/files');
+    expect(
+      req.url.queryParameters['q'],
+      "mimeType='application/vnd.google-apps.spreadsheet' and trashed=false",
+    );
+    expect(req.url.queryParameters['orderBy'], 'modifiedTime desc');
+    expect(req.headers['Authorization'], 'Bearer test-token');
+  });
+
+  test('readTransactions gets the tab unformatted', () async {
+    final rows = await gateway(
+      (_) async => ok({
+        'values': [
+          ['ref', -1000, true],
+        ],
+      }),
+    ).readTransactions('sid');
+    expect(rows, [
+      ['ref', -1000, true],
+    ]);
+    final req = requests.single;
+    expect(req.method, 'GET');
+    expect(
+      Uri.decodeComponent(req.url.path),
+      endsWith("/spreadsheets/sid/values/'$txTabTitle'"),
+    );
+    expect(req.url.queryParameters['valueRenderOption'], 'UNFORMATTED_VALUE');
+  });
+
+  test('readTransactions on a deleted Sheet is SheetMissing', () async {
+    expect(
+      () => gateway((_) async => error(404)).readTransactions('sid'),
+      throwsA(isA<SheetMissing>()),
+    );
+  });
+
   test('401 and 403 mean sign in again', () async {
     expect(
       () => gateway((_) async => error(401)).replaceTransactions('sid', []),

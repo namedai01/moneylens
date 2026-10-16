@@ -4,6 +4,7 @@ import '../app_services.dart';
 import '../data/settings_store.dart';
 import '../sync/backup_actions.dart';
 import '../theme.dart';
+import 'restore_dialog.dart';
 
 /// First launch: explain where data lives, offer to connect Google Sheet.
 class ConnectScreen extends StatefulWidget {
@@ -30,7 +31,9 @@ class _ConnectScreenState extends State<ConnectScreen> {
 
   Future<void> _connect() async {
     setState(() => _busy = true);
-    final error = await BackupActions(widget.services).connect();
+    final error = await BackupActions(
+      widget.services,
+    ).connect(pickRestore: (found) => pickRestoreSheet(context, found));
     if (!mounted) return;
     setState(() => _busy = false);
     if (error != null) {

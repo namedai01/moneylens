@@ -121,4 +121,11 @@ class _NotSignedIn implements SheetsGateway {
   @override
   Future<void> replaceTransactions(String id, List<List<Object?>> rows) =>
       throw AuthRequired();
+
+  @override
+  Future<List<SheetFile>> findSpreadsheets() => throw AuthRequired();
+
+  @override
+  Future<List<List<Object?>>> readTransactions(String id) =>
+      throw AuthRequired();
 }

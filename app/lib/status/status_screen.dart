@@ -12,6 +12,7 @@ import '../capture/listener.dart';
 import '../capture/raw_event.dart';
 import '../data/settings_store.dart';
 import '../report/mask.dart';
+import '../onboarding/restore_dialog.dart';
 import '../sync/background.dart';
 import '../sync/backup_actions.dart';
 import '../sync/sync_status.dart';
@@ -184,7 +185,11 @@ class _StatusScreenState extends State<StatusScreen>
             _BackupCard(
               backup: _backup,
               busy: _busy,
-              onConnect: () => _run((a) => a.connect()),
+              onConnect: () => _run(
+                (a) => a.connect(
+                  pickRestore: (found) => pickRestoreSheet(context, found),
+                ),
+              ),
               onSyncNow: () => _run((a) => a.syncNow()),
               onRecreate: () => _run((a) => a.recreateSheet()),
               onSignOut: () => _run((a) async {

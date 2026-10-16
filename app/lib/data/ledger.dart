@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../sync/sheet_layout.dart';
 import 'txn.dart';
 import 'vn_time.dart';
 
@@ -15,9 +16,16 @@ class Ledger {
   /// The account for [bankCode] + [last4], created on first sight.
   /// Safe when two callers (UI and background isolate) see a new account at
   /// once: the losing insert is ignored and both read the same row.
-  Future<int> accountIdFor({required String bankCode, String? last4}) async {
+  Future<int> accountIdFor({required String bankCode, String? last4}) =>
+      _accountId(db, bankCode: bankCode, last4: last4);
+
+  Future<int> _accountId(
+    DatabaseExecutor ex, {
+    required String bankCode,
+    String? last4,
+  }) async {
     Future<int?> find() async {
-      final rows = await db.query(
+      final rows = await ex.query(
         'accounts',
         columns: ['id'],
         where: 'bank_code = ? AND last4 IS ?',
@@ -30,7 +38,7 @@ class Ledger {
 
     final existing = await find();
     if (existing != null) return existing;
-    await db.insert('accounts', {
+    await ex.insert('accounts', {
       'bank_code': bankCode,
       'kind': 'bank',
       'name': '$bankCode ${last4 ?? ''}'.trim(),
@@ -60,6 +68,41 @@ class Ledger {
     return id != 0;
   }
 
+  Future<bool> isEmpty() async {
+    final rows = await db.rawQuery('SELECT 1 FROM transactions LIMIT 1');
+    return rows.isEmpty;
+  }
+
+  /// Loads transactions read back from the Sheet, all or nothing. Rows the
+  /// dedup keys already know are skipped; returns how many were inserted.
+  Future<int> restore(List<SheetTxn> txns) {
+    final now = _now();
+    return db.transaction((tx) async {
+      var inserted = 0;
+      for (final t in txns) {
+        final id = await tx.insert('transactions', {
+          'account_id': await _accountId(
+            tx,
+            bankCode: t.bankCode,
+            last4: t.accountLast4,
+          ),
+          'ref': t.ref,
+          'source': t.source,
+          'occurred_at': t.occurredAt.millisecondsSinceEpoch,
+          'amount': t.amount,
+          'direction': t.direction.db,
+          'balance_after': t.balanceAfter,
+          'description': t.description,
+          'excluded': t.excluded ? 1 : 0,
+          'created_at': now,
+          'updated_at': now,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        if (id != 0) inserted++;
+      }
+      return inserted;
+    });
+  }
+
   Future<void> setExcluded(int txnId, bool excluded) => db.update(
     'transactions',
     {'excluded': excluded ? 1 : 0, 'updated_at': _now()},
@@ -68,7 +111,7 @@ class Ledger {
   );
 
   static const _select =
-      'SELECT t.*, a.last4 FROM transactions t '
+      'SELECT t.*, a.bank_code, a.last4 FROM transactions t '
       'JOIN accounts a ON a.id = t.account_id';
 
   Future<List<Txn>> _query(String where, List<Object?> args) async {

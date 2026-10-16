@@ -39,6 +39,7 @@ class NewTxn {
 class Txn {
   final int id;
   final int accountId;
+  final String? accountBank;
   final String? accountLast4;
   final int? rawEventId;
   final String? ref;
@@ -55,6 +56,7 @@ class Txn {
   const Txn({
     required this.id,
     required this.accountId,
+    this.accountBank,
     required this.accountLast4,
     required this.rawEventId,
     required this.ref,
@@ -78,6 +80,7 @@ class Txn {
     return Txn(
       id: r['id']! as int,
       accountId: r['account_id']! as int,
+      accountBank: r['bank_code'] as String?,
       accountLast4: r['last4'] as String?,
       rawEventId: r['raw_event_id'] as int?,
       ref: r['ref'] as String?,

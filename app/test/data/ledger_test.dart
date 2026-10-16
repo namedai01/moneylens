@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moneylens/data/ledger.dart';
 import 'package:moneylens/data/txn.dart';
+import 'package:moneylens/sync/sheet_layout.dart';
 
 import '../support/app_db_fixture.dart';
 
@@ -180,5 +181,44 @@ void main() {
       ledger.accountIdFor(bankCode: 'VCB', last4: '7777'),
     ]);
     expect(ids[0], ids[1]);
+  });
+
+  group('restore', () {
+    SheetTxn sheetTx(String? ref, {bool excluded = false, String? last4}) =>
+        SheetTxn(
+          ref: ref,
+          occurredAt: oct,
+          direction: Direction.incoming,
+          amount: 50000,
+          balanceAfter: 900000,
+          description: 'luong',
+          excluded: excluded,
+          bankCode: 'VCB',
+          accountLast4: last4 ?? '1234',
+          source: 'android_notif',
+        );
+
+    test('keeps the hidden flag and joins existing accounts', () async {
+      expect(await ledger.isEmpty(), isTrue);
+      final n = await ledger.restore([
+        sheetTx('MBVCB.1', excluded: true),
+        sheetTx('MBVCB.2', last4: '9999'),
+      ]);
+      expect(n, 2);
+      expect(await ledger.isEmpty(), isFalse);
+      final all = await ledger.all();
+      expect(all[0].excluded, isTrue);
+      expect(all[0].accountId, acc);
+      expect(all[0].accountBank, 'VCB');
+      expect(all[0].rawEventId, isNull);
+      expect(all[1].accountLast4, '9999');
+      expect(all[1].accountId, isNot(acc));
+    });
+
+    test('skips rows the dedup keys already know', () async {
+      final n = await ledger.restore([sheetTx('MBVCB.1'), sheetTx('MBVCB.1')]);
+      expect(n, 1);
+      expect(await ledger.all(), hasLength(1));
+    });
   });
 }

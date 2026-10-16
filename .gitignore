@@ -1,0 +1,19 @@
+# Claude Code
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# Claude plugins (local state)
+.remember/
+.superpowers/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# Secrets (release keystore, signing config)
+*.jks
+*.keystore
+key.properties

@@ -43,6 +43,13 @@ flutter run --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleuse
 flutter build apk --release --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
 ```
 
+Hoặc lưu Client ID một lần vào `app/dart_defines.json` (đã gitignore) rồi build bằng script, APK ra tên `moneylens-<version>.apk`:
+
+```bash
+echo '{"GOOGLE_SERVER_CLIENT_ID": "<web-client-id>.apps.googleusercontent.com"}' > app/dart_defines.json
+app/scripts/build-apk.sh
+```
+
 ## 5. Kiểm tra
 
 1. Mở app → "Kết nối Google Sheet" → chọn tài khoản → đồng ý quyền.

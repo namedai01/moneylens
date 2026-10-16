@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local build config (Web Client ID), see scripts/build-apk.sh
+dart_defines.json

@@ -15,6 +15,7 @@ import '../report/mask.dart';
 import '../sync/background.dart';
 import '../sync/backup_actions.dart';
 import '../sync/sync_status.dart';
+import '../theme.dart';
 
 /// Android-only screen: listener health, Google Sheet backup, and the raw
 /// VCB notifications seen.
@@ -135,13 +136,15 @@ class _StatusScreenState extends State<StatusScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Trạng thái')),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
           children: [
+            const _SectionTitle('Đọc thông báo VCB'),
             _CheckTile(
               ok: _hasAccess,
               title: 'Quyền đọc thông báo',
@@ -161,6 +164,23 @@ class _StatusScreenState extends State<StatusScreen>
               },
               note: 'Xiaomi/Oppo/Vivo: bật thêm "Tự khởi chạy" cho MoneyLens.',
             ),
+            _Fact('Listener kết nối lần cuối', _formatOptional(_connectedAt)),
+            _Fact('Thông báo VCB gần nhất', _formatOptional(_lastVcbAt)),
+            if (kDebugMode)
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: _injectFake,
+                    child: const Text('Chèn thông báo VCB giả'),
+                  ),
+                  TextButton(
+                    onPressed: debugRunBackgroundSyncNow,
+                    child: const Text('Chạy sync nền ngay'),
+                  ),
+                ],
+              ),
+            const _SectionTitle('Sao lưu'),
             _BackupCard(
               backup: _backup,
               busy: _busy,
@@ -172,26 +192,13 @@ class _StatusScreenState extends State<StatusScreen>
                 return null;
               }),
             ),
-            const SizedBox(height: 16),
-            Text('Listener kết nối lần cuối: ${_formatOptional(_connectedAt)}'),
-            Text('Thông báo VCB gần nhất: ${_formatOptional(_lastVcbAt)}'),
-            if (kDebugMode)
-              TextButton(
-                onPressed: _injectFake,
-                child: const Text('Chèn thông báo VCB giả'),
-              ),
-            if (kDebugMode)
-              TextButton(
-                onPressed: debugRunBackgroundSyncNow,
-                child: const Text('Chạy sync nền ngay'),
-              ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: Text(
                     '20 thông báo VCB gần nhất',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: theme.textTheme.titleMedium,
                   ),
                 ),
                 TextButton(
@@ -200,18 +207,72 @@ class _StatusScreenState extends State<StatusScreen>
                 ),
               ],
             ),
+            if (_recent.isEmpty)
+              Text(
+                'Chưa nhận thông báo VCB nào.',
+                style: theme.textTheme.bodySmall,
+              ),
             for (final n in _recent)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: SelectableText(
-                    '${_formatTime(n.postedAt)} · ${n.packageName}\n'
-                    '${n.title ?? ''}\n${n.body}',
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: theme.colorScheme.outlineVariant),
                   ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_formatTime(n.postedAt)} · ${n.packageName}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 2),
+                    SelectableText(
+                      '${n.title ?? ''}\n${n.body}'.trim(),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
                 ),
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String text;
+
+  const _SectionTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 20, bottom: 10),
+    child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+  );
+}
+
+/// One label/value line, label muted on the left.
+class _Fact extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _Fact(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
+          Text(value, style: theme.textTheme.bodyMedium),
+        ],
       ),
     );
   }
@@ -244,24 +305,34 @@ class _CheckTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final money = MoneyColors.of(context);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Text(ok ? '✅' : '❌'),
-                const SizedBox(width: 8),
-                Expanded(child: Text(title)),
+                Icon(
+                  ok ? Icons.check_circle_rounded : Icons.error_rounded,
+                  size: 22,
+                  color: ok ? money.income : money.expense,
+                  semanticLabel: ok ? 'Đã bật' : 'Chưa bật',
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text(title, style: theme.textTheme.titleSmall)),
                 if (!ok)
                   FilledButton(onPressed: onAction, child: Text(actionLabel)),
               ],
             ),
             if (!ok) ...[
-              const SizedBox(height: 4),
-              Text(note, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.only(left: 34),
+                child: Text(note, style: theme.textTheme.bodySmall),
+              ),
             ],
           ],
         ),
@@ -327,28 +398,51 @@ class _BackupCard extends StatelessWidget {
     final id = backup.spreadsheetId;
     final error = describeSyncError(backup.error);
     final connected = backup.email != null && id != null;
+    final money = MoneyColors.of(context);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Sao lưu Google Sheet', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.table_chart_outlined,
+                  size: 22,
+                  color: connected ? money.income : money.muted,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Google Sheet',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             if (backup.lastSyncAt == null)
-              Text(
-                'Chưa có bản sao lưu — gỡ app là mất dữ liệu.',
-                style: TextStyle(color: theme.colorScheme.error),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  'Chưa có bản sao lưu — gỡ app là mất dữ liệu.',
+                  style: TextStyle(color: money.expense),
+                ),
               ),
-            if (backup.email != null) Text('Tài khoản: ${backup.email}'),
+            if (backup.email != null) _Fact('Tài khoản', backup.email!),
             if (backup.lastSyncAt != null)
-              Text('Đồng bộ lần cuối: ${_formatTime(backup.lastSyncAt!)}'),
-            Text('Thay đổi chưa đồng bộ: ${backup.unsynced}'),
+              _Fact('Đồng bộ lần cuối', _formatTime(backup.lastSyncAt!)),
+            _Fact('Thay đổi chưa đồng bộ', '${backup.unsynced}'),
             if (error != null)
-              Text(error, style: TextStyle(color: theme.colorScheme.error)),
-            const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(error, style: TextStyle(color: money.expense)),
+              ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 if (!connected)
                   FilledButton(

@@ -125,6 +125,37 @@ void main() {
     ]);
     await show(tester, s);
     expect(find.textContaining('Có thể thiếu giao dịch'), findsOneWidget);
+    // 900.000 − 100.000 should leave 800.000, the bank says 500.000.
+    expect(
+      find.text('Số dư lệch −300.000 ₫ — có thể thiếu giao dịch ở đây'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('several gaps share one banner', (tester) async {
+    // Tall enough that ListView builds every row.
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final s = await services(tester, [
+      for (final (i, balance) in [900000, 500000, 100000].indexed)
+        rawRow(
+          bigText: vcbOut(
+            ref: 'MBVCB.$i',
+            amount: 100000,
+            balance: balance,
+            time: '16-10-2026 1$i:00:00',
+          ),
+          postedAt: now,
+        ),
+    ]);
+    await show(tester, s);
+    expect(
+      find.text('Số dư không khớp ở 2 chỗ — có thể thiếu giao dịch.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Có thể thiếu giao dịch giữa'), findsNothing);
+    expect(find.textContaining('Số dư lệch'), findsNWidgets(2));
   });
 
   testWidgets('auth error shows a sign-in banner', (tester) async {

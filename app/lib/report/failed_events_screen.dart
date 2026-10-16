@@ -57,13 +57,14 @@ class _FailedEventsScreenState extends State<FailedEventsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Thông báo chưa đọc được')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
         children: [
-          const Text(
+          Text(
             'Số và tên đã được che. Kiểm tra lại, sửa nếu còn thông tin '
             'riêng, rồi gửi cho người làm app để thêm mẫu đọc.',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           for (final e in _events)
             Card(
               child: Padding(
@@ -71,8 +72,20 @@ class _FailedEventsScreenState extends State<FailedEventsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(formatVnTime(e.postedAt)),
-                    TextField(controller: _controllers[e.id], maxLines: null),
+                    Text(
+                      formatVnTime(e.postedAt),
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _controllers[e.id],
+                      maxLines: null,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     Align(
                       alignment: Alignment.centerRight,
                       child: FilledButton(

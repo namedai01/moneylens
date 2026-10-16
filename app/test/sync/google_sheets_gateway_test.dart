@@ -75,6 +75,10 @@ void main() {
     expect(id, 'new-id');
     final create = jsonDecode(requests[0].body) as Map<String, dynamic>;
     expect(create['properties']['title'], 'MoneyLens');
+    // Formulas use "," separators: a vi_VN sheet would expect ";" and show
+    // #ERROR! everywhere, so pin the locale instead of inheriting the user's.
+    expect(create['properties']['locale'], 'en_US');
+    expect(create['properties']['timeZone'], 'Asia/Ho_Chi_Minh');
     expect((create['sheets'] as List).map((s) => s['properties']['title']), [
       txTabTitle,
       summaryTabTitle,

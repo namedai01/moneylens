@@ -69,6 +69,18 @@ void main() {
     expect(s.first, ['tháng', 'tổng thu', 'tổng chi', 'chênh lệch']);
     final formulas = s.skip(1).expand((r) => r).whereType<String>().join('\n');
     expect(formulas, contains("'$txTabTitle'!C3:C"));
-    expect(formulas, contains("'$txTabTitle'!H3:H,FALSE"));
+    // SUMIFS does not expand over an array of criteria inside ARRAYFORMULA
+    // (every month would show the same total): evaluate per month instead,
+    // with exact text match on the month so "2026-10" is never read as a date.
+    expect(formulas, isNot(contains('ARRAYFORMULA(IF(A2:A="",,SUMIFS')));
+    final income = s[1][1]! as String;
+    expect(income, startsWith('=MAP(A2:A,LAMBDA(m,'));
+    expect(
+      income,
+      contains(
+        "FILTER('$txTabTitle'!E3:E,'$txTabTitle'!C3:C=m,'$txTabTitle'!H3:H=FALSE,'$txTabTitle'!E3:E>0)",
+      ),
+    );
+    expect(income, contains('IFERROR('));
   });
 }

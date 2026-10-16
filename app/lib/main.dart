@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'app_services.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'data/settings_store.dart';
+import 'ingest/foreground_ingest.dart';
 import 'onboarding/connect_screen.dart';
 import 'sync/auto_sync.dart';
 import 'sync/background.dart';
@@ -13,7 +14,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final services = await AppServices.open();
   await services.rules.load();
-  await services.ingest.run();
+  try {
+    await services.ingest.run();
+  } catch (_) {
+    // Never block the app from opening; the next sync retries and records it.
+  }
   final onboarded =
       await services.settings.get(SettingKeys.onboardingDone) != null;
   runApp(MoneyLensApp(services: services, onboarded: onboarded));
@@ -51,23 +56,40 @@ class _MoneyLensAppState extends State<MoneyLensApp>
     onDone: () => _dashboard.currentState?.reload(),
   );
 
+  late final _poller = ForegroundIngest(
+    widget.services.ingest.run,
+    onNew: () {
+      _dashboard.currentState?.reload();
+      _auto.onLocalChange();
+    },
+  );
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _auto.onAppResumed();
+    _poller.start();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _auto.dispose();
+    _poller.stop();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _auto.onAppResumed();
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _auto.onAppResumed();
+        _poller.start();
+      case AppLifecycleState.paused || AppLifecycleState.detached:
+        _poller.stop();
+      default:
+    }
   }
 
   @override

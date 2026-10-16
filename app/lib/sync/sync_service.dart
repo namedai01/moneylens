@@ -43,7 +43,12 @@ class SyncService {
       _running ??= _sync().whenComplete(() => _running = null);
 
   Future<SyncResult> _sync() async {
-    await ingest.run();
+    try {
+      await ingest.run();
+    } catch (_) {
+      // New notifications stay in capture.db and are retried next time.
+      return _fail(SyncResult.failed, 'ingest_failed');
+    }
     final id = await settings.get(SettingKeys.spreadsheetId);
     if (id == null) return SyncResult.notConnected;
     try {

@@ -98,6 +98,13 @@ void main() {
     );
   });
 
+  test('400 on the tab range means the tab was renamed or deleted', () async {
+    expect(
+      () => gateway((_) async => error(400)).replaceTransactions('sid', []),
+      throwsA(isA<SheetMissing>()),
+    );
+  });
+
   test('404 means the sheet is gone', () async {
     expect(
       () => gateway((_) async => error(404)).replaceTransactions('sid', []),

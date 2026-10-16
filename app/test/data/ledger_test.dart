@@ -173,4 +173,12 @@ void main() {
     final noLast4 = await ledger.accountIdFor(bankCode: 'VCB');
     expect(await ledger.accountIdFor(bankCode: 'VCB'), noLast4);
   });
+
+  test('concurrent accountIdFor for a new account agrees on one id', () async {
+    final ids = await Future.wait([
+      ledger.accountIdFor(bankCode: 'VCB', last4: '7777'),
+      ledger.accountIdFor(bankCode: 'VCB', last4: '7777'),
+    ]);
+    expect(ids[0], ids[1]);
+  });
 }

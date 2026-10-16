@@ -11,6 +11,7 @@ import '../app_services.dart';
 import '../capture/listener.dart';
 import '../capture/raw_event.dart';
 import '../data/settings_store.dart';
+import '../report/mask.dart';
 import '../sync/background.dart';
 import '../sync/backup_actions.dart';
 import '../sync/sync_status.dart';
@@ -111,13 +112,24 @@ class _StatusScreenState extends State<StatusScreen>
     await openNotificationAccessSettings();
   }
 
+  /// Copies masked samples only: the clipboard can sync off the phone.
   Future<void> _copyAll() async {
     final all = await widget.services.source.recent(limit: 50);
-    final lines = all.map((n) => jsonEncode(n.toJson())).join('\n');
+    final lines = all
+        .map(
+          (n) => jsonEncode({
+            'packageName': n.packageName,
+            'title': n.title == null ? null : maskSample(n.title!),
+            'body': maskSample(n.body),
+          }),
+        )
+        .join('\n');
     await Clipboard.setData(ClipboardData(text: lines));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Đã sao chép ${all.length} thông báo')),
+      SnackBar(
+        content: Text('Đã sao chép ${all.length} thông báo (đã che số)'),
+      ),
     );
   }
 

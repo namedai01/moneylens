@@ -22,6 +22,7 @@ void main() {
   late SettingsStore settings;
   late FakeSheetsGateway gateway;
   late SyncService sync;
+  late RawEventSource source;
   late DateTime now;
 
   DateTime at(int minute) => DateTime.utc(2026, 10, 16, 3, minute);
@@ -44,6 +45,7 @@ void main() {
     settings = SettingsStore(db);
     gateway = FakeSheetsGateway();
     final rules = bundledRules();
+    source = await RawEventSource.open(capturePath, factory: databaseFactoryFfi);
     sync = SyncService(
       ledger: ledger,
       settings: settings,
@@ -143,5 +145,13 @@ void main() {
     await sync.connect();
     await Future.wait([sync.sync(), sync.sync()]);
     expect(gateway.replaced, hasLength(1));
+  });
+
+  test('ingest failure is recorded, not thrown', () async {
+    await sync.connect();
+    await source.db.close();
+    expect(await sync.sync(), SyncResult.failed);
+    expect(await settings.get(SettingKeys.lastSyncError), 'ingest_failed');
+    expect(gateway.replaced, isEmpty);
   });
 }

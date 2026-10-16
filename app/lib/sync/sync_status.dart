@@ -7,6 +7,10 @@ String? describeSyncError(String? code) {
   if (code == 'sheet_missing') {
     return 'Không tìm thấy Sheet (đã bị xoá hoặc mất quyền). Có thể tạo lại.';
   }
+  if (code == 'ingest_failed') {
+    return 'Không đọc được thông báo đã lưu trên máy. App sẽ thử lại; nếu '
+        'lặp lại, hãy mở lại app.';
+  }
   return 'Đồng bộ chưa được (mạng?). App sẽ tự thử lại.';
 }
 

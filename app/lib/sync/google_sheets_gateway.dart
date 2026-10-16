@@ -66,7 +66,9 @@ class GoogleSheetsGateway implements SheetsGateway {
       switch (e.status) {
         case 401 || 403:
           throw AuthRequired();
-        case 404:
+        // 400 "Unable to parse range": the tab was renamed or deleted.
+        // Recreating the Sheet is the way out, same as a deleted file.
+        case 400 || 404:
           throw SheetMissing();
       }
       rethrow;

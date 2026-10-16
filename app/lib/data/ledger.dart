@@ -13,21 +13,31 @@ class Ledger {
   int _now() => _clock().millisecondsSinceEpoch;
 
   /// The account for [bankCode] + [last4], created on first sight.
+  /// Safe when two callers (UI and background isolate) see a new account at
+  /// once: the losing insert is ignored and both read the same row.
   Future<int> accountIdFor({required String bankCode, String? last4}) async {
-    final found = await db.query(
-      'accounts',
-      columns: ['id'],
-      where: 'bank_code = ? AND last4 IS ?',
-      whereArgs: [bankCode, last4],
-    );
-    if (found.isNotEmpty) return found.first['id']! as int;
-    return db.insert('accounts', {
+    Future<int?> find() async {
+      final rows = await db.query(
+        'accounts',
+        columns: ['id'],
+        where: 'bank_code = ? AND last4 IS ?',
+        whereArgs: [bankCode, last4],
+        orderBy: 'id',
+        limit: 1,
+      );
+      return rows.isEmpty ? null : rows.first['id']! as int;
+    }
+
+    final existing = await find();
+    if (existing != null) return existing;
+    await db.insert('accounts', {
       'bank_code': bankCode,
       'kind': 'bank',
       'name': '$bankCode ${last4 ?? ''}'.trim(),
       'last4': last4,
       'created_at': _now(),
-    });
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    return (await find())!;
   }
 
   /// False when the transaction is already stored (same Ref, or same

@@ -17,6 +17,9 @@ Future<void> main() async {
   await services.rules.load();
   try {
     await services.ingest.run();
+    // A new build may read what the old one could not, even with the same
+    // rules version (normalization lives in code, not in the rules file).
+    await services.ingest.reparseFailed();
   } catch (_) {
     // Never block the app from opening; the next sync retries and records it.
   }

@@ -121,8 +121,10 @@ class _StatusScreenState extends State<StatusScreen>
         .map(
           (n) => jsonEncode({
             'packageName': n.packageName,
-            'title': n.title == null ? null : maskSample(n.title!),
-            'body': maskSample(n.body),
+            'title': n.title == null
+                ? null
+                : revealHidden(maskSample(n.title!)),
+            'body': revealHidden(maskSample(n.body)),
           }),
         )
         .join('\n');

@@ -25,4 +25,14 @@ void main() {
     expect(await log.failedIds(), [2, 5]);
     expect(await log.failedCount(), 2);
   });
+
+  test(
+    'failureReasons maps failed raw ids to error and rules version',
+    () async {
+      final log = ParseLog(await memoryAppDb());
+      await log.record(1, 'parsed', rulesVersion: 2);
+      await log.record(2, 'failed', error: 'bad-time:vcb', rulesVersion: 2);
+      expect(await log.failureReasons(), {2: 'bad-time:vcb · rules v2'});
+    },
+  );
 }

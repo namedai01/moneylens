@@ -43,4 +43,18 @@ class ParseLog {
     );
     return rows.first['c']! as int;
   }
+
+  /// Why each failed raw failed, keyed by raw id, e.g. `bad-time:vcb · rules v2`.
+  Future<Map<int, String>> failureReasons() async {
+    final rows = await db.query(
+      'raw_parse',
+      columns: ['raw_event_id', 'parse_error', 'rules_version'],
+      where: "parse_status = 'failed'",
+    );
+    return {
+      for (final r in rows)
+        r['raw_event_id']! as int:
+            '${r['parse_error'] ?? '?'} · rules v${r['rules_version']}',
+    };
+  }
 }

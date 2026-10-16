@@ -19,6 +19,7 @@ class FailedEventsScreen extends StatefulWidget {
 
 class _FailedEventsScreenState extends State<FailedEventsScreen> {
   List<RawEvent> _events = [];
+  Map<int, String> _reasons = {};
   final _controllers = <int, TextEditingController>{};
 
   @override
@@ -38,14 +39,18 @@ class _FailedEventsScreenState extends State<FailedEventsScreen> {
   Future<void> _load() async {
     final s = widget.services;
     final events = await s.source.byIds(await s.parseLog.failedIds());
+    final reasons = await s.parseLog.failureReasons();
     if (!mounted) return;
     setState(() {
       _events = events.reversed.toList();
+      _reasons = reasons;
       for (final e in _events) {
         _controllers.putIfAbsent(
           e.id,
           () => TextEditingController(
-            text: maskSample('${e.title ?? ''}\n${e.body}'.trim()),
+            text: revealHidden(
+              maskSample('${e.title ?? ''}\n${e.body}'.trim()),
+            ),
           ),
         );
       }
@@ -73,7 +78,7 @@ class _FailedEventsScreenState extends State<FailedEventsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      formatVnTime(e.postedAt),
+                      '${formatVnTime(e.postedAt)} · ${_reasons[e.id] ?? '?'}',
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
                     const SizedBox(height: 6),
@@ -90,7 +95,11 @@ class _FailedEventsScreenState extends State<FailedEventsScreen> {
                       alignment: Alignment.centerRight,
                       child: FilledButton(
                         onPressed: () => SharePlus.instance.share(
-                          ShareParams(text: _controllers[e.id]!.text),
+                          ShareParams(
+                            text:
+                                '[${_reasons[e.id] ?? '?'}]\n'
+                                '${_controllers[e.id]!.text}',
+                          ),
                         ),
                         child: const Text('Gửi mẫu lỗi'),
                       ),

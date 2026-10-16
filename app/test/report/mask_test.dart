@@ -35,4 +35,15 @@ void main() {
     expect(masked, contains('chuyen tien'));
     expect(masked, contains('XXXX X chuyen tien'));
   });
+
+  test('revealHidden names invisible marks and odd spaces', () {
+    expect(
+      revealHidden('VCB\u200B 1\u00A0VND\tlúc\n16'),
+      'VCB<U+200B> 1<U+00A0>VND<U+0009>lúc\n16',
+    );
+  });
+
+  test('revealHidden leaves plain text alone', () {
+    expect(revealHidden('Số dư TK VCB'), 'Số dư TK VCB');
+  });
 }

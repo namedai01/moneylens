@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="18 18 72 72">
+  <!-- Full icon (iOS, legacy Android): visible 72-unit window of the 108-unit adaptive canvas. -->
+  <rect width="108" height="108" fill="#17212B"/>
+  <g transform="translate(3 3)">
+  <polyline points="38.5,57 38.5,41.5 48,51 57.5,41.5" fill="none" stroke="#F3F5F7" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="48" cy="51" r="3" fill="#FF7A80"/>
+  <circle cx="57.5" cy="41.5" r="3.6" fill="#4CC59A"/>
+  <circle cx="48" cy="48" r="20" fill="none" stroke="#F3F5F7" stroke-width="6"/>
+  <line x1="63" y1="63" x2="72" y2="72" stroke="#F3F5F7" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

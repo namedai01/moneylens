@@ -118,7 +118,8 @@ Kiến trúc mới: **không có server nào giữ dữ liệu giao dịch, kể
 - Không đưa nguyên văn thông báo (raw) lên Sheet.
 
 **Đồng bộ**
-- Kích hoạt: nút "Đồng bộ ngay"; tự động sau khi có giao dịch mới hoặc đổi `excluded` (gộp trong ~1 phút); định kỳ ~6h bằng WorkManager khi có mạng.
+- **Độ trễ chấp nhận được (chủ dự án chốt):** Sheet cập nhật khi người dùng mở app, hoặc chậm nhất ~6h. **Không** cần lên Sheet trong vài phút khi app đang tắt. Kotlin không kích hoạt job nào khi có thông báo mới; nó chỉ INSERT.
+- Kích hoạt: nút "Đồng bộ ngay"; khi mở / quay lại app; khi app đang mở mà có giao dịch mới hoặc đổi `excluded` (gộp trong ~1 phút); định kỳ ~6h bằng WorkManager khi có mạng (job này chạy ingest + sync).
 - Một lần sync: ingest → đọc mọi transaction → clear tab "Giao dịch" → ghi toàn bộ → lưu `last_sync_at`. Thất bại → lưu `last_sync_error`, lần sau thử lại.
 - Màn hình hiện: lần sync gần nhất, số thay đổi chưa sync (`updated_at > last_synced_change_at`), lỗi gần nhất.
 - Sync nền không lấy được token im lặng (cần người dùng bấm lại) → không hỏng gì, hiện thông báo "Mở app để đồng bộ". Xem rủi ro mục 9.

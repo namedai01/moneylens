@@ -48,7 +48,7 @@ Mục tiêu phụ: chủ dự án học Flutter.
 
 ```
 ┌────────────── Flutter app (Android) ───────────────┐
-│  Notification listener (plugin Flutter; fallback Kotlin) │
+│  Kotlin NotificationListenerService (system-bound)  │
 │   - lọc package VCB Digibank                        │
 │   - lấy title/text/bigText/postTime                 │
 │   - xếp hàng đợi local → gửi lên ingest (retry)     │
@@ -70,7 +70,7 @@ Mục tiêu phụ: chủ dự án học Flutter.
 
 | Quyết định | Lý do |
 |---|---|
-| Listener: **ưu tiên Flutter thuần** qua plugin (`flutter_notification_listener_plus` hoặc `smart_notification_listener` — chọn trong spike), xử lý + gửi HTTP trong Dart background callback. **Phương án dự phòng:** tự viết `NotificationListenerService` Kotlin (~150 dòng) trong `android/`, tự gửi HTTP, Flutter chỉ cấu hình qua MethodChannel. | Người dùng muốn Flutter thuần (học + 1 ngôn ngữ). Rủi ro: plugin chạy Dart nền phụ thuộc Flutter engine được khởi động lại sau khi app bị kill / reboot. Spike phải test: kill app, reboot, để máy idle qua đêm → nếu mất thông báo thì chuyển sang Kotlin. |
+| Listener: **`NotificationListenerService` Kotlin tự viết** (`VcbNotificationListener`) trong `android/`, hệ thống bind trực tiếp, tự ghi dữ liệu; Flutter chỉ đọc/cấu hình qua MethodChannel `moneylens/listener`. Không cần foreground service. | Spike 2026-10-16: plugin `flutter_notification_listener_plus` mất thông báo khi vuốt app khỏi recent (gửi sự kiện vào engine UI đã huỷ), bản vá thì hỏng reboot, và plugin log nội dung mọi thông báo ra logcat. Bản Kotlin đạt cả 4 kịch bản trên emulator (mở app, vuốt khỏi recent, kill -9, reboot) + burst. |
 | Gửi **nguyên văn** thông báo lên server, **parse ở server** | VCB đổi mẫu tin → sửa parser server + parse lại dữ liệu cũ, không phải phát APK mới cho 5 người. |
 | **Device key** dài hạn cho service native, không dùng JWT Supabase | Access token Supabase hết hạn ~1h, service native khó refresh. Khi đăng nhập, app gọi đăng ký thiết bị → server sinh key ngẫu nhiên, lưu hash, trả key một lần; app lưu ở EncryptedSharedPreferences. Thu hồi được từng máy. |
 | Dashboard viết **1 lần bằng Flutter**, chạy cả app lẫn web | Đáp ứng "xem cả 2 nơi" + một codebase + iOS sau. |
@@ -173,7 +173,6 @@ Tiêu chí đi tiếp:
 
 ## 10. Lựa chọn Claude tự đưa ra (chưa được người dùng xác nhận riêng)
 
-- Tiêu chí chuyển sang Kotlin: spike thấy mất thông báo sau kill app / reboot / idle qua đêm.
 - Device key thay cho JWT ở service nền.
 - Parse ở Supabase Edge Function (TypeScript/Deno).
 - Đăng nhập email + password.

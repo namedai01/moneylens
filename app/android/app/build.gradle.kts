@@ -47,3 +47,9 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    testImplementation("junit:junit:4.13.2")
+    // Real org.json for JVM unit tests (the android.jar copy is stubbed).
+    testImplementation("org.json:json:20250517")
+}

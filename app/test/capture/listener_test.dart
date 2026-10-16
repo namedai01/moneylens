@@ -1,32 +1,38 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:moneylens/capture/listener.dart';
 
 void main() {
-  test('maps plugin raw event to CapturedNotification', () {
-    final n = capturedFromRaw({
-      'package_name': 'com.VCB',
-      'title': 'Vietcombank',
-      'text': 'Số dư TK VCB 0011…',
-      'bigText': 'Số dư TK VCB 0011000000000 -500,000 VND',
-      'timestamp': 1760585067123,
-    });
+  TestWidgetsFlutterBinding.ensureInitialized();
+  final calls = <String>[];
 
-    expect(n, isNotNull);
-    expect(n!.packageName, 'com.VCB');
-    expect(n.title, 'Vietcombank');
-    expect(n.text, 'Số dư TK VCB 0011…');
-    expect(n.bigText, 'Số dư TK VCB 0011000000000 -500,000 VND');
-    expect(n.postedAt.millisecondsSinceEpoch, 1760585067123);
-    expect(n.postedAt.isUtc, isTrue);
+  setUp(() {
+    calls.clear();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('moneylens/listener'), (
+          call,
+        ) async {
+          calls.add(call.method);
+          return switch (call.method) {
+            'hasAccess' => true,
+            'logPath' => '/data/user/0/vn.moneylens.app/app_flutter/x.json',
+            _ => null,
+          };
+        });
   });
 
-  test('missing package name is dropped', () {
-    expect(capturedFromRaw({'title': 'x', 'timestamp': 1}), isNull);
+  test('hasNotificationAccess asks the native side', () async {
+    expect(await hasNotificationAccess(), isTrue);
+    expect(calls, ['hasAccess']);
   });
 
-  test('missing timestamp falls back to now', () {
-    final before = DateTime.now().toUtc();
-    final n = capturedFromRaw({'package_name': 'com.VCB'})!;
-    expect(n.postedAt.isBefore(before), isFalse);
+  test('captureLogFile uses the path the native listener writes to', () async {
+    final f = await captureLogFile();
+    expect(f.path, '/data/user/0/vn.moneylens.app/app_flutter/x.json');
+  });
+
+  test('openNotificationAccessSettings invokes openSettings', () async {
+    await openNotificationAccessSettings();
+    expect(calls, ['openSettings']);
   });
 }

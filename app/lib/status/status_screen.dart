@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:isolate';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,23 +23,21 @@ class _StatusScreenState extends State<StatusScreen>
   bool _batteryUnrestricted = false;
   Map<String, int> _counts = {};
   List<CapturedNotification> _recent = [];
-  ReceivePort? _port;
-  StreamSubscription<dynamic>? _sub;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _port = registerCaptureUiPort();
-    _sub = _port!.listen((_) => _refresh());
+    // The native listener writes the log; poll it while this screen is open.
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _refresh());
     _refresh();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _sub?.cancel();
-    _port?.close();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -52,7 +49,6 @@ class _StatusScreenState extends State<StatusScreen>
 
   Future<void> _refresh() async {
     final hasAccess = await hasNotificationAccess();
-    if (hasAccess) await initListener();
     final battery = await Permission.ignoreBatteryOptimizations.isGranted;
     final log = CaptureLog(await captureLogFile());
     final counts = await log.packageCounts();
@@ -67,7 +63,6 @@ class _StatusScreenState extends State<StatusScreen>
   }
 
   Future<void> _grantAccess() async {
-    await Permission.notification.request();
     await openNotificationAccessSettings();
   }
 

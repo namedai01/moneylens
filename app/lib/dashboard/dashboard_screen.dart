@@ -82,7 +82,9 @@ class DashboardScreenState extends State<DashboardScreen> {
             tooltip: 'Trạng thái',
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const StatusScreen()),
+              MaterialPageRoute<void>(
+                builder: (_) => StatusScreen(services: widget.services),
+              ),
             ),
           ),
         ],

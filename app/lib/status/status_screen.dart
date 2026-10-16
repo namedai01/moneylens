@@ -5,14 +5,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../app_services.dart';
 import '../capture/listener.dart';
 import '../capture/raw_event.dart';
-import '../capture/raw_event_source.dart';
+import '../data/settings_store.dart';
+import '../sync/backup_actions.dart';
+import '../sync/sync_status.dart';
 
-/// Android-only screen: listener health plus the raw VCB notifications seen.
+/// Android-only screen: listener health, Google Sheet backup, and the raw
+/// VCB notifications seen.
 class StatusScreen extends StatefulWidget {
-  const StatusScreen({super.key});
+  final AppServices services;
+
+  const StatusScreen({super.key, required this.services});
 
   @override
   State<StatusScreen> createState() => _StatusScreenState();
@@ -25,7 +32,8 @@ class _StatusScreenState extends State<StatusScreen>
   DateTime? _connectedAt;
   DateTime? _lastVcbAt;
   List<RawEvent> _recent = [];
-  RawEventSource? _source;
+  _Backup _backup = const _Backup();
+  bool _busy = false;
   Timer? _timer;
 
   @override
@@ -53,7 +61,8 @@ class _StatusScreenState extends State<StatusScreen>
   Future<void> _refresh() async {
     final hasAccess = await hasNotificationAccess();
     final battery = await Permission.ignoreBatteryOptimizations.isGranted;
-    final source = await _openSource();
+    final source = widget.services.source;
+    final backup = await _Backup.read(widget.services);
     final connectedAt = await source.listenerConnectedAt();
     final lastVcbAt = await source.lastVcbAt();
     final recent = await source.recent();
@@ -64,11 +73,22 @@ class _StatusScreenState extends State<StatusScreen>
       _connectedAt = connectedAt;
       _lastVcbAt = lastVcbAt;
       _recent = recent;
+      _backup = backup;
     });
   }
 
-  Future<RawEventSource> _openSource() async =>
-      _source ??= await RawEventSource.open(await captureDbPath());
+  Future<void> _run(Future<String?> Function(BackupActions a) action) async {
+    setState(() => _busy = true);
+    final message = await action(BackupActions(widget.services));
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (message != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+    await _refresh();
+  }
 
   /// Debug builds: a synthetic transaction the bundled rules can read.
   Future<void> _injectFake() async {
@@ -91,7 +111,7 @@ class _StatusScreenState extends State<StatusScreen>
   }
 
   Future<void> _copyAll() async {
-    final all = await (await _openSource()).recent(limit: 50);
+    final all = await widget.services.source.recent(limit: 50);
     final lines = all.map((n) => jsonEncode(n.toJson())).join('\n');
     await Clipboard.setData(ClipboardData(text: lines));
     if (!mounted) return;
@@ -127,6 +147,17 @@ class _StatusScreenState extends State<StatusScreen>
                 await _refresh();
               },
               note: 'Xiaomi/Oppo/Vivo: bật thêm "Tự khởi chạy" cho MoneyLens.',
+            ),
+            _BackupCard(
+              backup: _backup,
+              busy: _busy,
+              onConnect: () => _run((a) => a.connect()),
+              onSyncNow: () => _run((a) => a.syncNow()),
+              onRecreate: () => _run((a) => a.recreateSheet()),
+              onSignOut: () => _run((a) async {
+                await a.signOut();
+                return null;
+              }),
             ),
             const SizedBox(height: 16),
             Text('Listener kết nối lần cuối: ${_formatOptional(_connectedAt)}'),
@@ -214,6 +245,123 @@ class _CheckTile extends StatelessWidget {
               const SizedBox(height: 4),
               Text(note, style: Theme.of(context).textTheme.bodySmall),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Snapshot of the backup settings shown on the status screen.
+class _Backup {
+  final String? email;
+  final String? spreadsheetId;
+  final DateTime? lastSyncAt;
+  final String? error;
+  final int unsynced;
+
+  const _Backup({
+    this.email,
+    this.spreadsheetId,
+    this.lastSyncAt,
+    this.error,
+    this.unsynced = 0,
+  });
+
+  static Future<_Backup> read(AppServices s) async {
+    DateTime? time(String? v) => v == null ? null : DateTime.parse(v);
+    final syncedChange = time(
+      await s.settings.get(SettingKeys.lastSyncedChangeAt),
+    );
+    final lastSyncAt = time(await s.settings.get(SettingKeys.lastSyncAt));
+    return _Backup(
+      email: await s.settings.get(SettingKeys.googleEmail),
+      spreadsheetId: await s.settings.get(SettingKeys.spreadsheetId),
+      lastSyncAt: lastSyncAt,
+      error: await s.settings.get(SettingKeys.lastSyncError),
+      unsynced: lastSyncAt == null
+          ? await s.ledger.changedSince(null)
+          : await s.ledger.changedSince(syncedChange),
+    );
+  }
+}
+
+class _BackupCard extends StatelessWidget {
+  final _Backup backup;
+  final bool busy;
+  final VoidCallback onConnect;
+  final VoidCallback onSyncNow;
+  final VoidCallback onRecreate;
+  final VoidCallback onSignOut;
+
+  const _BackupCard({
+    required this.backup,
+    required this.busy,
+    required this.onConnect,
+    required this.onSyncNow,
+    required this.onRecreate,
+    required this.onSignOut,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final id = backup.spreadsheetId;
+    final error = describeSyncError(backup.error);
+    final connected = backup.email != null && id != null;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Sao lưu Google Sheet', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            if (backup.lastSyncAt == null)
+              Text(
+                'Chưa có bản sao lưu — gỡ app là mất dữ liệu.',
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            if (backup.email != null) Text('Tài khoản: ${backup.email}'),
+            if (backup.lastSyncAt != null)
+              Text('Đồng bộ lần cuối: ${_formatTime(backup.lastSyncAt!)}'),
+            Text('Thay đổi chưa đồng bộ: ${backup.unsynced}'),
+            if (error != null)
+              Text(error, style: TextStyle(color: theme.colorScheme.error)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                if (!connected)
+                  FilledButton(
+                    onPressed: busy ? null : onConnect,
+                    child: const Text('Kết nối Google Sheet'),
+                  ),
+                if (connected)
+                  FilledButton(
+                    onPressed: busy ? null : onSyncNow,
+                    child: Text(busy ? 'Đang đồng bộ…' : 'Đồng bộ ngay'),
+                  ),
+                if (id != null)
+                  OutlinedButton(
+                    onPressed: () => launchUrl(
+                      sheetUrl(id),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    child: const Text('Mở Sheet'),
+                  ),
+                if (backup.error == 'sheet_missing')
+                  OutlinedButton(
+                    onPressed: busy ? null : onRecreate,
+                    child: const Text('Tạo lại Sheet'),
+                  ),
+                if (backup.email != null)
+                  TextButton(
+                    onPressed: busy ? null : onSignOut,
+                    child: const Text('Đăng xuất'),
+                  ),
+              ],
+            ),
           ],
         ),
       ),

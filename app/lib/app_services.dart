@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'auth/google_auth.dart';
 import 'capture/listener.dart';
 import 'capture/raw_event_source.dart';
 import 'data/app_db.dart';
@@ -14,6 +15,7 @@ import 'data/parse_log.dart';
 import 'data/settings_store.dart';
 import 'ingest/ingest.dart';
 import 'parser/rules_repository.dart';
+import 'sync/google_sheets_gateway.dart';
 import 'sync/sheets_gateway.dart';
 import 'sync/sync_service.dart';
 
@@ -28,6 +30,9 @@ class AppServices {
   final Ingest ingest;
   final SyncService sync;
 
+  /// Null in tests and wherever Google sign-in is unavailable.
+  final GoogleAuth? auth;
+
   AppServices._({
     required this.source,
     required this.ledger,
@@ -36,18 +41,22 @@ class AppServices {
     required this.rules,
     required this.ingest,
     required this.sync,
+    this.auth,
   });
 
   /// Production wiring on the phone.
-  static Future<AppServices> open({SheetsGateway Function()? gateway}) async {
+  static Future<AppServices> open() async {
     final support = await getApplicationSupportDirectory();
+    final auth = GoogleAuth();
+    final gateway = GoogleSheetsGateway(() => auth.headers(interactive: false));
     return assemble(
       capturePath: await captureDbPath(),
       appDbPath: p.join(await getDatabasesPath(), 'moneylens.db'),
       rulesCache: File(p.join(support.path, 'parser-rules.json')),
       loadBundled: () => rootBundle.loadString('assets/parser-rules.json'),
       client: http.Client(),
-      gateway: gateway,
+      gateway: () => gateway,
+      auth: auth,
     );
   }
 
@@ -59,6 +68,7 @@ class AppServices {
     required http.Client client,
     DatabaseFactory? factory,
     SheetsGateway Function()? gateway,
+    GoogleAuth? auth,
   }) async {
     final db = await openAppDb(appDbPath, factory: factory);
     final source = await RawEventSource.open(capturePath, factory: factory);
@@ -89,11 +99,12 @@ class AppServices {
         ingest: ingest,
         gateway: gateway ?? () => const _NotSignedIn(),
       ),
+      auth: auth,
     );
   }
 }
 
-/// Until Google sign-in is wired, every Sheets call asks for sign-in.
+/// Without a gateway (tests), every Sheets call asks for sign-in.
 class _NotSignedIn implements SheetsGateway {
   const _NotSignedIn();
 

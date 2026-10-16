@@ -91,7 +91,7 @@ void main() {
     expect(await sync.sync(), SyncResult.ok);
     final rows = gateway.replaced.single.rows;
     expect(rows, hasLength(4));
-    expect(rows.skip(2).map((r) => r[0]), ['MBVCB.1', 'MBVCB.2']);
+    expect(rows.skip(2).map((r) => r[0]), ['MBVCB.1.chuyen', 'MBVCB.2.chuyen']);
   });
 
   test('sync writes full current state every time', () async {
@@ -198,7 +198,10 @@ void main() {
         expect(await fresh.restore('old'), 2);
         expect(await fresh.settings.get(SettingKeys.spreadsheetId), 'old');
         final restored = await fresh.ledger.all();
-        expect(restored.map((t) => t.ref), ['MBVCB.1', 'MBVCB.2']);
+        expect(restored.map((t) => t.ref), [
+          'MBVCB.1.chuyen',
+          'MBVCB.2.chuyen',
+        ]);
         expect(restored.map((t) => t.excluded), [true, false]);
 
         // Everything but the local row ids survives the round trip.

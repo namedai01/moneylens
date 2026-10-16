@@ -10,6 +10,8 @@ void main() {
   late Directory dir;
   late File cache;
   final bundledJson = File('assets/parser-rules.json').readAsStringSync();
+  final bundled =
+      (jsonDecode(bundledJson) as Map<String, dynamic>)['version'] as int;
 
   String withVersion(int v) {
     final m = jsonDecode(bundledJson) as Map<String, dynamic>;
@@ -35,15 +37,15 @@ void main() {
   );
 
   test('picks higher version between bundled and cache', () async {
-    cache.writeAsStringSync(withVersion(5));
-    expect((await repo(never).load()).version, 5);
+    cache.writeAsStringSync(withVersion(bundled + 4));
+    expect((await repo(never).load()).version, bundled + 4);
   });
 
   test('ignores a stale or corrupt cache', () async {
     cache.writeAsStringSync('{');
-    expect((await repo(never).load()).version, 1);
-    cache.writeAsStringSync(withVersion(0));
-    expect((await repo(never).load()).version, 1);
+    expect((await repo(never).load()).version, bundled);
+    cache.writeAsStringSync(withVersion(bundled - 1));
+    expect((await repo(never).load()).version, bundled);
   });
 
   for (final (name, client) in [
@@ -51,11 +53,11 @@ void main() {
     ('404', MockClient((_) async => http.Response('nope', 404))),
     (
       'same version',
-      MockClient((_) async => http.Response(withVersion(1), 200)),
+      MockClient((_) async => http.Response(withVersion(bundled), 200)),
     ),
     (
       'older version',
-      MockClient((_) async => http.Response(withVersion(0), 200)),
+      MockClient((_) async => http.Response(withVersion(bundled - 1), 200)),
     ),
     ('offline', MockClient((_) async => throw http.ClientException('offline'))),
   ]) {
@@ -63,7 +65,7 @@ void main() {
       final r = repo(client);
       await r.load();
       expect(await r.refresh(), isFalse);
-      expect(r.current.version, 1);
+      expect(r.current.version, bundled);
       expect(cache.existsSync(), isFalse);
     });
   }
@@ -71,13 +73,14 @@ void main() {
   test('adopts newer remote and caches it', () async {
     final r = repo(
       MockClient(
-        (_) async => http.Response.bytes(utf8.encode(withVersion(2)), 200),
+        (_) async =>
+            http.Response.bytes(utf8.encode(withVersion(bundled + 1)), 200),
       ),
     );
     await r.load();
     expect(await r.refresh(), isTrue);
-    expect(r.current.version, 2);
-    expect((await repo(never).load()).version, 2);
+    expect(r.current.version, bundled + 1);
+    expect((await repo(never).load()).version, bundled + 1);
   });
 
   test('request carries no user data', () async {

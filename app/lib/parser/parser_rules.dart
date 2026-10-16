@@ -130,7 +130,7 @@ class ParserRules {
 
   ParseOutcome parse(RawEvent e) {
     if (!_package.hasMatch(e.packageName)) return const Ignored('package');
-    final text = '${e.title ?? ''}\n${e.body}';
+    final text = _normalize('${e.title ?? ''}\n${e.body}');
     for (final rule in _rules) {
       final m = rule.pattern.firstMatch(text);
       if (m == null) continue;
@@ -143,6 +143,15 @@ class ParserRules {
         ? const Failed('no-rule')
         : const Ignored('no-match');
   }
+
+  static final _invisible = RegExp(r'\p{Cf}', unicode: true);
+  static final _spaces = RegExp(r'\s+');
+
+  /// Drops invisible format marks and folds every whitespace run (newlines,
+  /// no-break spaces) into one space, so rules can be written with plain
+  /// spaces whatever the bank app puts between words.
+  static String _normalize(String text) =>
+      text.replaceAll(_invisible, '').replaceAll(_spaces, ' ');
 
   ParseOutcome _transaction(_TxRule rule, RegExpMatch m) {
     String? group(String name) =>

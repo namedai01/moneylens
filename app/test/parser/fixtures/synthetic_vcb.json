@@ -10,8 +10,8 @@
       "balanceAfter": 8500000,
       "occurredAt": "2026-10-16T03:24:27Z",
       "accountLast4": "3456",
-      "ref": "MBVCB.11223344556",
-      "description": "TRAN A chuyen tien.CT tu 0011004123456 TRAN A toi 0123456789 TRAN B"
+      "ref": "MBVCB.11223344556.TRAN",
+      "description": "MBVCB.11223344556.TRAN A chuyen tien.CT tu 0011004123456 TRAN A toi 0123456789 TRAN B"
     }
   },
   {
@@ -25,8 +25,8 @@
       "balanceAfter": 10500000,
       "occurredAt": "2026-10-17T01:00:05Z",
       "accountLast4": "3456",
-      "ref": "123456.171026",
-      "description": "NGUYEN VAN C chuyen tien"
+      "ref": "123456.171026.NGUYEN",
+      "description": "123456.171026.NGUYEN VAN C chuyen tien"
     }
   },
   {
@@ -40,26 +40,92 @@
       "balanceAfter": 10450000,
       "occurredAt": "2026-10-18T16:59:59Z",
       "accountLast4": "3456",
-      "ref": "MBVCB.99887766",
-      "description": "mua ca phe\nquan 1"
+      "ref": "MBVCB.99887766.mua",
+      "description": "MBVCB.99887766.mua ca phe quan 1"
+    }
+  },
+  {
+    "name": "outgoing to MoMo, wrapped across lines",
+    "title": "Thông báo VCB",
+    "bigText": "Số dư TK VCB 0011004123456 -2,000 VND lúc\n16-10-2026 17:56:37. Số dư 17,678 VND.\nRef MBVCB.16568499001.350470.TRAN A\nchuyen tien.CT tu 0011004123456\nTRAN A toi 0901234567 TRAN A tai MoMo",
+    "expect": {
+      "status": "parsed",
+      "direction": "out",
+      "amount": 2000,
+      "balanceAfter": 17678,
+      "occurredAt": "2026-10-16T10:56:37Z",
+      "accountLast4": "3456",
+      "ref": "MBVCB.16568499001.350470.TRAN",
+      "description": "MBVCB.16568499001.350470.TRAN A chuyen tien.CT tu 0011004123456 TRAN A toi 0901234567 TRAN A tai MoMo"
+    }
+  },
+  {
+    "name": "outgoing to MoMo, no-break spaces",
+    "title": "Thông báo VCB",
+    "bigText": "Số dư TK VCB 0011004123456 -2,000 VND lúc 16-10-2026 17:56:37. Số dư 17,678 VND. Ref MBVCB.16568499001.350470.TRAN A chuyen tien.CT tu 0011004123456 TRAN A toi 0901234567 TRAN A tai MoMo",
+    "expect": {
+      "status": "parsed",
+      "direction": "out",
+      "amount": 2000,
+      "balanceAfter": 17678,
+      "occurredAt": "2026-10-16T10:56:37Z",
+      "accountLast4": "3456",
+      "ref": "MBVCB.16568499001.350470.TRAN",
+      "description": "MBVCB.16568499001.350470.TRAN A chuyen tien.CT tu 0011004123456 TRAN A toi 0901234567 TRAN A tai MoMo"
+    }
+  },
+  {
+    "name": "outgoing to MoMo, zero-width marks",
+    "title": "Thông báo VCB",
+    "bigText": "Số dư TK VCB​ 0011004123456 -2,000 VND‎ lúc 16-10-2026 17:56:37. Số dư 17,678 VND. Ref MBVCB.16568499001.350470.TRAN A chuyen tien.CT tu 0011004123456 TRAN A toi 0901234567 TRAN A tai MoMo",
+    "expect": {
+      "status": "parsed",
+      "direction": "out",
+      "amount": 2000,
+      "balanceAfter": 17678,
+      "occurredAt": "2026-10-16T10:56:37Z",
+      "accountLast4": "3456",
+      "ref": "MBVCB.16568499001.350470.TRAN",
+      "description": "MBVCB.16568499001.350470.TRAN A chuyen tien.CT tu 0011004123456 TRAN A toi 0901234567 TRAN A tai MoMo"
+    }
+  },
+  {
+    "name": "incoming from MoMo, Ref ends with dash",
+    "title": "Thông báo VCB",
+    "bigText": "Số dư TK VCB 0011004123456 +2,000 VND lúc 16-10-2026 17:47:56. Số dư 21,678 VND. Ref 151989209673-TRAN A chuyen tien qua MoMo-CHUYEN TIEN-OQCH000MdRjj-MOMO151989209673MOMO#SP#020097042210161747552026JSR6112105.5390.36878.174756",
+    "expect": {
+      "status": "parsed",
+      "direction": "in",
+      "amount": 2000,
+      "balanceAfter": 21678,
+      "occurredAt": "2026-10-16T10:47:56Z",
+      "accountLast4": "3456",
+      "ref": "151989209673-TRAN",
+      "description": "151989209673-TRAN A chuyen tien qua MoMo-CHUYEN TIEN-OQCH000MdRjj-MOMO151989209673MOMO#SP#020097042210161747552026JSR6112105.5390.36878.174756"
     }
   },
   {
     "name": "otp",
     "title": "VCB",
     "bigText": "Mã OTP của Quý khách là 123456. Không cung cấp cho bất kỳ ai.",
-    "expect": { "status": "ignored" }
+    "expect": {
+      "status": "ignored"
+    }
   },
   {
     "name": "login notice",
     "title": "VCB Digibank",
     "bigText": "Quý khách đã đăng nhập VCB Digibank trên thiết bị mới.",
-    "expect": { "status": "ignored" }
+    "expect": {
+      "status": "ignored"
+    }
   },
   {
     "name": "unknown balance text",
     "title": "VCB",
     "bigText": "Quý khách có biến động số dư. Vui lòng mở ứng dụng để xem chi tiết.",
-    "expect": { "status": "failed" }
+    "expect": {
+      "status": "failed"
+    }
   }
 ]

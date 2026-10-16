@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "packagePattern": "vcb|vietcombank",
   "transactionHint": "Số dư TK|biến động số dư",
   "rules": [
@@ -7,7 +7,7 @@
       "id": "vcb-balance-change",
       "kind": "transaction",
       "bankCode": "VCB",
-      "pattern": "Số dư TK VCB (?<account>\\d+) (?<sign>[+-])(?<amount>[\\d.,]+) VND lúc (?<time>\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2})\\. Số dư (?<balance>[\\d.,]+) VND\\. Ref (?<ref>[A-Z0-9]+\\.[^.\\s]+)\\.?(?<desc>.*)",
+      "pattern": "Số dư TK VCB (?<account>\\d+) (?<sign>[+-])(?<amount>[\\d.,]+) VND lúc (?<time>\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2})\\. Số dư (?<balance>[\\d.,]+) VND\\. Ref (?=(?<ref>\\S+))(?<desc>.*)",
       "timeFormat": "dd-MM-yyyy HH:mm:ss",
       "thousandsSeparator": ","
     },

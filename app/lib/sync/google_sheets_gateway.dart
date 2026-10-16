@@ -24,7 +24,13 @@ class GoogleSheetsGateway implements SheetsGateway {
   }) => _guard(() async {
     final created = await _api.spreadsheets.create(
       Spreadsheet(
-        properties: SpreadsheetProperties(title: title),
+        // Summary formulas use "," separators; a sheet inheriting a vi_VN
+        // locale expects ";" and every formula would be #ERROR!.
+        properties: SpreadsheetProperties(
+          title: title,
+          locale: 'en_US',
+          timeZone: 'Asia/Ho_Chi_Minh',
+        ),
         sheets: [
           Sheet(properties: SheetProperties(title: txTabTitle)),
           Sheet(properties: SheetProperties(title: summaryTabTitle)),

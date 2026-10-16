@@ -3,7 +3,7 @@
 Ngày: 2026-10-16 · Tác giả: dainguyen (+ Claude)
 
 ## 1. Mục đích & lý do
-test
+
 App quản lý thu chi cá nhân. Vấn đề: chuyển khoản qua Vietcombank (VCB) hằng ngày nhưng không biết mỗi tháng tổng thu / tổng chi bao nhiêu.
 
 VCB không có API công khai cho tài khoản cá nhân, người dùng không đăng ký SMS Banking, chưa muốn dùng dịch vụ trung gian (SePay/Casso). → Cách lấy dữ liệu: **đọc thông báo đẩy (push notification) của app VCB Digibank trên Android**, gửi realtime về server.

@@ -1,0 +1,65 @@
+[
+  {
+    "name": "outgoing transfer",
+    "title": "Thông báo VCB",
+    "bigText": "Số dư TK VCB 0011004123456 -1,500,000 VND lúc 16-10-2026 10:24:27. Số dư 8,500,000 VND. Ref MBVCB.11223344556.TRAN A chuyen tien.CT tu 0011004123456 TRAN A toi 0123456789 TRAN B",
+    "expect": {
+      "status": "parsed",
+      "direction": "out",
+      "amount": 1500000,
+      "balanceAfter": 8500000,
+      "occurredAt": "2026-10-16T03:24:27Z",
+      "accountLast4": "3456",
+      "ref": "MBVCB.11223344556",
+      "description": "TRAN A chuyen tien.CT tu 0011004123456 TRAN A toi 0123456789 TRAN B"
+    }
+  },
+  {
+    "name": "incoming from another bank",
+    "title": "Thông báo VCB",
+    "bigText": "Số dư TK VCB 0011004123456 +2,000,000 VND lúc 17-10-2026 08:00:05. Số dư 10,500,000 VND. Ref 123456.171026.NGUYEN VAN C chuyen tien",
+    "expect": {
+      "status": "parsed",
+      "direction": "in",
+      "amount": 2000000,
+      "balanceAfter": 10500000,
+      "occurredAt": "2026-10-17T01:00:05Z",
+      "accountLast4": "3456",
+      "ref": "123456.171026",
+      "description": "NGUYEN VAN C chuyen tien"
+    }
+  },
+  {
+    "name": "multi-line description",
+    "title": "Thông báo VCB",
+    "bigText": "Số dư TK VCB 0011004123456 -50,000 VND lúc 18-10-2026 23:59:59. Số dư 10,450,000 VND. Ref MBVCB.99887766.mua ca phe\nquan 1",
+    "expect": {
+      "status": "parsed",
+      "direction": "out",
+      "amount": 50000,
+      "balanceAfter": 10450000,
+      "occurredAt": "2026-10-18T16:59:59Z",
+      "accountLast4": "3456",
+      "ref": "MBVCB.99887766",
+      "description": "mua ca phe\nquan 1"
+    }
+  },
+  {
+    "name": "otp",
+    "title": "VCB",
+    "bigText": "Mã OTP của Quý khách là 123456. Không cung cấp cho bất kỳ ai.",
+    "expect": { "status": "ignored" }
+  },
+  {
+    "name": "login notice",
+    "title": "VCB Digibank",
+    "bigText": "Quý khách đã đăng nhập VCB Digibank trên thiết bị mới.",
+    "expect": { "status": "ignored" }
+  },
+  {
+    "name": "unknown balance text",
+    "title": "VCB",
+    "bigText": "Quý khách có biến động số dư. Vui lòng mở ứng dụng để xem chi tiết.",
+    "expect": { "status": "failed" }
+  }
+]

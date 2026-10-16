@@ -15,7 +15,8 @@ void main() {
           calls.add(call.method);
           return switch (call.method) {
             'hasAccess' => true,
-            'logPath' => '/data/user/0/vn.moneylens.app/app_flutter/x.json',
+            'captureDbPath' =>
+              '/data/user/0/vn.moneylens.app/databases/capture.db',
             _ => null,
           };
         });
@@ -26,10 +27,16 @@ void main() {
     expect(calls, ['hasAccess']);
   });
 
-  test('captureLogFile uses the path the native listener writes to', () async {
-    final f = await captureLogFile();
-    expect(f.path, '/data/user/0/vn.moneylens.app/app_flutter/x.json');
-  });
+  test(
+    'captureDbPath uses the database the native listener writes to',
+    () async {
+      expect(
+        await captureDbPath(),
+        '/data/user/0/vn.moneylens.app/databases/capture.db',
+      );
+      expect(calls, ['captureDbPath']);
+    },
+  );
 
   test('openNotificationAccessSettings invokes openSettings', () async {
     await openNotificationAccessSettings();

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -69,6 +70,22 @@ class _StatusScreenState extends State<StatusScreen>
   Future<RawEventSource> _openSource() async =>
       _source ??= await RawEventSource.open(await captureDbPath());
 
+  /// Debug builds: a synthetic transaction the bundled rules can read.
+  Future<void> _injectFake() async {
+    final now = DateTime.now().toUtc().add(const Duration(hours: 7));
+    String two(int v) => v.toString().padLeft(2, '0');
+    final time =
+        '${two(now.day)}-${two(now.month)}-${now.year} '
+        '${two(now.hour)}:${two(now.minute)}:${two(now.second)}';
+    await debugInjectVcb(
+      title: 'Thông báo VCB',
+      bigText:
+          'Số dư TK VCB 0011004123456 -45,000 VND lúc $time. '
+          'Số dư 1,000,000 VND. Ref MBVCB.${now.millisecondsSinceEpoch}.ca phe',
+    );
+    await _refresh();
+  }
+
   Future<void> _grantAccess() async {
     await openNotificationAccessSettings();
   }
@@ -114,6 +131,11 @@ class _StatusScreenState extends State<StatusScreen>
             const SizedBox(height: 16),
             Text('Listener kết nối lần cuối: ${_formatOptional(_connectedAt)}'),
             Text('Thông báo VCB gần nhất: ${_formatOptional(_lastVcbAt)}'),
+            if (kDebugMode)
+              TextButton(
+                onPressed: _injectFake,
+                child: const Text('Chèn thông báo VCB giả'),
+              ),
             const SizedBox(height: 16),
             Row(
               children: [

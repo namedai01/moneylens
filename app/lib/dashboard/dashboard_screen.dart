@@ -4,6 +4,7 @@ import '../app_services.dart';
 import '../data/txn.dart';
 import '../data/vn_time.dart';
 import '../format.dart';
+import '../report/failed_events_screen.dart';
 import '../status/status_screen.dart';
 import 'month_chart.dart';
 
@@ -102,7 +103,13 @@ class DashboardScreenState extends State<DashboardScreen> {
                 color: theme.colorScheme.errorContainer,
                 text:
                     '$_failed thông báo chưa đọc được — có thể đang thiếu '
-                    'giao dịch.',
+                    'giao dịch. Bấm để gửi mẫu (đã che số).',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        FailedEventsScreen(services: widget.services),
+                  ),
+                ),
               ),
             for (final g in _gaps)
               _Banner(
@@ -155,13 +162,17 @@ class DashboardScreenState extends State<DashboardScreen> {
 class _Banner extends StatelessWidget {
   final Color color;
   final String text;
+  final VoidCallback? onTap;
 
-  const _Banner({required this.color, required this.text});
+  const _Banner({required this.color, required this.text, this.onTap});
 
   @override
   Widget build(BuildContext context) => Card(
     color: color,
-    child: Padding(padding: const EdgeInsets.all(12), child: Text(text)),
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(padding: const EdgeInsets.all(12), child: Text(text)),
+    ),
   );
 }
 

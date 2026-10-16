@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:unorm_dart/unorm_dart.dart' as unorm;
+
 import '../capture/raw_event.dart';
 import '../data/txn.dart';
 
@@ -147,11 +149,12 @@ class ParserRules {
   static final _invisible = RegExp(r'\p{Cf}', unicode: true);
   static final _spaces = RegExp(r'\s+');
 
-  /// Drops invisible format marks and folds every whitespace run (newlines,
-  /// no-break spaces) into one space, so rules can be written with plain
+  /// Composes accents (VCB can send `lu` + U+0301 for `lúc`), drops invisible
+  /// format marks and folds every whitespace run (newlines, no-break spaces)
+  /// into one space, so rules can be written as plain NFC text with plain
   /// spaces whatever the bank app puts between words.
   static String _normalize(String text) =>
-      text.replaceAll(_invisible, '').replaceAll(_spaces, ' ');
+      unorm.nfc(text.replaceAll(_invisible, '')).replaceAll(_spaces, ' ');
 
   ParseOutcome _transaction(_TxRule rule, RegExpMatch m) {
     String? group(String name) =>

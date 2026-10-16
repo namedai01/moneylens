@@ -127,5 +127,20 @@
     "expect": {
       "status": "failed"
     }
+  },
+  {
+    "name": "decomposed accents (NFD)",
+    "title": "Thông báo VCB",
+    "bigText": "Số dư TK VCB 0011004123456 +2,000 VND lu\u0301c 16-10-2026 23:37:31. Sô\u0301 dư 19,678 VND. Ref MBVCB.16573707644.TRAN A chuyen tien.CT tu 0022334455 TRAN A toi 0011004123456 TRAN B",
+    "expect": {
+      "status": "parsed",
+      "direction": "in",
+      "amount": 2000,
+      "balanceAfter": 19678,
+      "occurredAt": "2026-10-16T16:37:31Z",
+      "accountLast4": "3456",
+      "ref": "MBVCB.16573707644.TRAN",
+      "description": "MBVCB.16573707644.TRAN A chuyen tien.CT tu 0022334455 TRAN A toi 0011004123456 TRAN B"
+    }
   }
 ]

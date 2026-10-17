@@ -12,8 +12,13 @@ data class CapturedNotification(
     val body: String get() = bigText?.takeIf { it.isNotEmpty() } ?: text ?: ""
 }
 
-/** True for Vietcombank apps (exact package id is confirmed during the spike). */
-fun isVcbPackage(packageName: String): Boolean {
+private val shbSegment = Regex("""(^|\.)shb""")
+
+/**
+ * True for the bank apps MoneyLens reads: Vietcombank, and SHB matched on a
+ * package segment so names like `cashbook` stay out.
+ */
+fun isBankPackage(packageName: String): Boolean {
     val p = packageName.lowercase()
-    return p.contains("vcb") || p.contains("vietcombank")
+    return p.contains("vcb") || p.contains("vietcombank") || shbSegment.containsMatchIn(p)
 }

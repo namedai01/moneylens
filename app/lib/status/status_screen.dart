@@ -147,7 +147,7 @@ class _StatusScreenState extends State<StatusScreen>
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
           children: [
-            const _SectionTitle('Đọc thông báo VCB'),
+            const _SectionTitle('Đọc thông báo ngân hàng'),
             _CheckTile(
               ok: _hasAccess,
               title: 'Quyền đọc thông báo',
@@ -168,7 +168,7 @@ class _StatusScreenState extends State<StatusScreen>
               note: 'Xiaomi/Oppo/Vivo: bật thêm "Tự khởi chạy" cho MoneyLens.',
             ),
             _Fact('Listener kết nối lần cuối', _formatOptional(_connectedAt)),
-            _Fact('Thông báo VCB gần nhất', _formatOptional(_lastVcbAt)),
+            _Fact('Thông báo ngân hàng gần nhất', _formatOptional(_lastVcbAt)),
             if (kDebugMode)
               Wrap(
                 spacing: 8,
@@ -204,7 +204,7 @@ class _StatusScreenState extends State<StatusScreen>
               children: [
                 Expanded(
                   child: Text(
-                    '20 thông báo VCB gần nhất',
+                    '20 thông báo ngân hàng gần nhất',
                     style: theme.textTheme.titleMedium,
                   ),
                 ),
@@ -216,7 +216,7 @@ class _StatusScreenState extends State<StatusScreen>
             ),
             if (_recent.isEmpty)
               Text(
-                'Chưa nhận thông báo VCB nào.',
+                'Chưa nhận thông báo ngân hàng nào.',
                 style: theme.textTheme.bodySmall,
               ),
             for (final n in _recent)

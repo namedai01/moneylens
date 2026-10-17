@@ -1,7 +1,7 @@
 {
-  "version": 2,
-  "packagePattern": "vcb|vietcombank",
-  "transactionHint": "Số dư TK|biến động số dư",
+  "version": 3,
+  "packagePattern": "vcb|vietcombank|(^|\\.)shb",
+  "transactionHint": "Số dư TK|biến động số dư|Phát sinh",
   "rules": [
     {
       "id": "vcb-balance-change",
@@ -9,6 +9,13 @@
       "bankCode": "VCB",
       "pattern": "Số dư TK VCB (?<account>\\d+) (?<sign>[+-])(?<amount>[\\d.,]+) VND lúc (?<time>\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2})\\. Số dư (?<balance>[\\d.,]+) VND\\. Ref (?=(?<ref>\\S+))(?<desc>.*)",
       "timeFormat": "dd-MM-yyyy HH:mm:ss",
+      "thousandsSeparator": ","
+    },
+    {
+      "id": "shb-balance-change",
+      "kind": "transaction",
+      "bankCode": "SHB",
+      "pattern": "Phát sinh (?<sign>[+-])(?<amount>[\\d.,]+) VND Tài khoản (?<account>\\d+)(?<desc>.*)",
       "thousandsSeparator": ","
     },
     { "id": "otp-promo", "kind": "ignore", "pattern": "OTP|khuyến mãi|ưu đãi" }

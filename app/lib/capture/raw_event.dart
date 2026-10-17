@@ -1,4 +1,4 @@
-/// A VCB notification stored by the native listener in `capture.db`.
+/// A bank-app notification stored by the native listener in `capture.db`.
 class RawEvent {
   final int id;
   final String packageName;

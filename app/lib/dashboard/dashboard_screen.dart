@@ -490,7 +490,7 @@ class _EmptyMonth extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Giao dịch hiện ở đây khi VCB Digibank báo biến động số dư.',
+            'Giao dịch hiện ở đây khi app VCB hoặc SHB báo biến động số dư.',
             style: theme.textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),

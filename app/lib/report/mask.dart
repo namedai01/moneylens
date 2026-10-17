@@ -2,6 +2,8 @@
 const _keep = {
   'VCB',
   'MBVCB',
+  'SHB',
+  'SAHA',
   'VND',
   'TK',
   'CT',

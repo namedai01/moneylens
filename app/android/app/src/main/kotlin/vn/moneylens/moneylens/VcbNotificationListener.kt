@@ -19,7 +19,7 @@ class VcbNotificationListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         // Other apps' notifications are never read, stored or counted.
-        if (!isVcbPackage(sbn.packageName)) return
+        if (!isBankPackage(sbn.packageName)) return
         val extras = sbn.notification.extras
         val n = CapturedNotification(
             packageName = sbn.packageName,

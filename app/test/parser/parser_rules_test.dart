@@ -6,15 +6,19 @@ import 'package:moneylens/capture/raw_event.dart';
 import 'package:moneylens/data/txn.dart';
 import 'package:moneylens/parser/parser_rules.dart';
 
-RawEvent raw(String? title, String body, {String pkg = 'com.VCB.digibank'}) =>
-    RawEvent(
-      id: 1,
-      packageName: pkg,
-      title: title,
-      text: body,
-      bigText: body,
-      postedAt: DateTime.utc(2026, 10, 16),
-    );
+RawEvent raw(
+  String? title,
+  String body, {
+  String pkg = 'com.VCB.digibank',
+  DateTime? postedAt,
+}) => RawEvent(
+  id: 1,
+  packageName: pkg,
+  title: title,
+  text: body,
+  bigText: body,
+  postedAt: postedAt ?? DateTime.utc(2026, 10, 16),
+);
 
 ParserRules bundled() =>
     ParserRules.tryParse(File('assets/parser-rules.json').readAsStringSync())!;
@@ -69,6 +73,91 @@ void main() {
   test('unknown VCB balance text fails with no-rule', () {
     final o = bundled().parse(raw('VCB', 'Quý khách có biến động số dư.'));
     expect((o as Failed).reason, 'no-rule');
+  });
+
+  group('SHB SAHA', () {
+    const pkg = 'vn.shb.saha.mbanking';
+    final posted = DateTime.utc(2026, 10, 16, 16, 57, 12);
+
+    ParseOutcome shb(String body) =>
+        bundled().parse(raw('SHB SAHA', body, pkg: pkg, postedAt: posted));
+
+    test('outgoing: no time in text, so the post time is used', () {
+      final t =
+          (shb('Phát sinh -5,000 VND\nTài khoản 0905695976\nxp') as Parsed).txn;
+      expect(t.bankCode, 'SHB');
+      expect(t.direction, Direction.outgoing);
+      expect(t.amount, 5000);
+      expect(t.occurredAt, posted);
+      expect(t.accountLast4, '5976');
+      expect(t.balanceAfter, isNull);
+      expect(t.ref, isNull);
+      expect(t.description, 'xp');
+    });
+
+    test('incoming with a multi-line description', () {
+      final t =
+          (shb(
+                    'Phát sinh +1,250,000 VND\nTài khoản 0905695976\n'
+                    'NGUYEN VAN A chuyen tien\ntien nha',
+                  )
+                  as Parsed)
+              .txn;
+      expect(t.direction, Direction.incoming);
+      expect(t.amount, 1250000);
+      expect(t.description, 'NGUYEN VAN A chuyen tien tien nha');
+    });
+
+    test('empty description', () {
+      final t =
+          (shb('Phát sinh -20,000 VND\nTài khoản 0905695976') as Parsed).txn;
+      expect(t.description, '');
+    });
+
+    test('unknown "Phát sinh" text fails with no-rule', () {
+      expect((shb('Phát sinh giao dịch mới') as Failed).reason, 'no-rule');
+    });
+
+    test('only package ids with an shb segment are read', () {
+      for (final p in ['vn.shb.mbanking', 'com.shbsaha.app']) {
+        expect(
+          bundled().parse(raw('SHB', 'Phát sinh -1 VND', pkg: p)),
+          isNot(isA<Ignored>().having((i) => i.reason, 'reason', 'package')),
+          reason: p,
+        );
+      }
+      final o = bundled().parse(
+        raw('Sổ thu chi', 'Phát sinh -5,000 VND', pkg: 'com.cashbook.app'),
+      );
+      expect((o as Ignored).reason, 'package');
+    });
+  });
+
+  test('a rule without timeFormat must not declare a time group', () {
+    String rules(Map<String, Object> rule) => jsonEncode({
+      'version': 1,
+      'packagePattern': 'x',
+      'transactionHint': 'x',
+      'rules': [
+        {
+          'id': 'r',
+          'kind': 'transaction',
+          'bankCode': 'X',
+          'thousandsSeparator': ',',
+          ...rule,
+        },
+      ],
+    });
+    expect(
+      ParserRules.tryParse(
+        rules({'pattern': r'(?<sign>[+-])(?<amount>\d+) (?<time>\d+)'}),
+      ),
+      isNull,
+    );
+    expect(
+      ParserRules.tryParse(rules({'pattern': r'(?<sign>[+-])(?<amount>\d+)'})),
+      isNotNull,
+    );
   });
 
   ParserRules rulesWith(String separator) => ParserRules.tryParse(

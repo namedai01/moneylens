@@ -64,7 +64,10 @@ class _IgnoreRule extends _Rule {
 
 class _TxRule extends _Rule {
   final String bankCode;
-  final _TimeFormat time;
+
+  /// Null when the bank's text carries no time (SHB): the notification's post
+  /// time is used instead.
+  final _TimeFormat? time;
   final String thousandsSeparator;
 
   _TxRule(
@@ -113,16 +116,20 @@ class ParserRules {
       case 'ignore':
         return _IgnoreRule(id, pattern);
       case 'transaction':
-        for (final g in const ['sign', 'amount', 'time']) {
+        final timeFormat = r['timeFormat'] as String?;
+        for (final g in ['sign', 'amount', if (timeFormat != null) 'time']) {
           if (!source.contains('(?<$g>')) {
             throw FormatException('rule $id lacks group $g');
           }
+        }
+        if (timeFormat == null && source.contains('(?<time>')) {
+          throw FormatException('rule $id has group time but no timeFormat');
         }
         return _TxRule(
           id,
           pattern,
           bankCode: r['bankCode'] as String,
-          time: _TimeFormat(r['timeFormat'] as String),
+          time: timeFormat == null ? null : _TimeFormat(timeFormat),
           thousandsSeparator: r['thousandsSeparator'] as String,
         );
       default:
@@ -138,7 +145,7 @@ class ParserRules {
       if (m == null) continue;
       return switch (rule) {
         _IgnoreRule() => Ignored(rule.id),
-        _TxRule() => _transaction(rule, m),
+        _TxRule() => _transaction(rule, m, e.postedAt),
       };
     }
     return _hint.hasMatch(text)
@@ -156,14 +163,17 @@ class ParserRules {
   static String _normalize(String text) =>
       unorm.nfc(text.replaceAll(_invisible, '')).replaceAll(_spaces, ' ');
 
-  ParseOutcome _transaction(_TxRule rule, RegExpMatch m) {
+  ParseOutcome _transaction(_TxRule rule, RegExpMatch m, DateTime postedAt) {
     String? group(String name) =>
         m.groupNames.contains(name) ? m.namedGroup(name) : null;
 
     final amount = _number(group('amount'), rule.thousandsSeparator);
     if (amount == null) return Failed('bad-amount:${rule.id}');
     if (amount == 0) return const Failed('zero-amount');
-    final occurredAt = rule.time.parse(group('time') ?? '');
+    final occurredAt = switch (rule.time) {
+      null => postedAt,
+      final time => time.parse(group('time') ?? ''),
+    };
     if (occurredAt == null) return Failed('bad-time:${rule.id}');
     final balanceText = group('balance');
     final balance = _number(balanceText, rule.thousandsSeparator);

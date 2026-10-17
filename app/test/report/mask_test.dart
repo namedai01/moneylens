@@ -36,6 +36,13 @@ void main() {
     expect(masked, contains('XXXX X chuyen tien'));
   });
 
+  test('keeps SHB words, masks the SHB account', () {
+    expect(
+      maskSample('SHB SAHA\nPhát sinh -5,000 VND\nTài khoản 0905695976\nxp'),
+      'SHB SAHA\nPhát sinh -9,999 VND\nTài khoản 9999999999\nxp',
+    );
+  });
+
   test('revealHidden names invisible marks and odd spaces', () {
     expect(
       revealHidden('VCB\u200B 1\u00A0VND\tlúc\n16'),

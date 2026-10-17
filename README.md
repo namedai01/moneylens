@@ -8,6 +8,16 @@ App Android cá nhân tự ghi lại giao dịch Vietcombank từ thông báo c�
 - Setup Google Cloud (làm một lần): [docs/setup-google-cloud.md](docs/setup-google-cloud.md)
 - Thiết kế: [docs/superpowers/specs/2026-10-16-moneylens-local-first-design.md](docs/superpowers/specs/2026-10-16-moneylens-local-first-design.md)
 
+## Ảnh màn hình
+
+Dữ liệu trong ảnh là giao dịch giả.
+
+| Dashboard | Dashboard (tối) | Trạng thái |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/dashboard.png" width="240" alt="Dashboard: tổng chi, thu, chênh lệch tháng 10 và biểu đồ nhiều tháng"> | <img src="docs/screenshots/dashboard-dark.png" width="240" alt="Dashboard ở chế độ tối"> | <img src="docs/screenshots/status.png" width="240" alt="Màn trạng thái: quyền đọc thông báo, tối ưu pin, sao lưu Google Sheet"> |
+| **Thông báo chưa đọc được** | **Lần đầu mở app** | |
+| <img src="docs/screenshots/failed-notifications.png" width="240" alt="Thông báo chưa parse được, kèm lý do lỗi và nút gửi mẫu"> | <img src="docs/screenshots/onboarding.png" width="240" alt="Màn giới thiệu nơi lưu dữ liệu và kết nối Google Sheet"> | |
+
 ## Tính năng
 
 - Bắt thông báo biến động số dư VCB kể cả khi app không mở (`NotificationListenerService`).
